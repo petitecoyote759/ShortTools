@@ -15,8 +15,24 @@ using static ShortTools.General.Prints;
 
 namespace ShortTools.General
 {
+    /// <summary>
+    /// A class designed for settings, where you inherit this class to add a function to save the data within the class to a file.
+    /// <code>
+    /// public class Settings : ShortTools.General.Settings
+    /// {
+    ///     public string Test { get; set; } = "test123"; 
+    /// }
+    /// </code>
+    /// Will be saved on a call of
+    /// <code>
+    /// Settings settings = new Settings();
+    /// settings.SaveSettings("Settings.ini")
+    /// </code>
+    /// You can also load these files to a class using either the constructor or the LoadSettings function
+    /// </summary>
     public abstract class Settings
     {
+        /// <inheritdoc cref="Settings"/>
         protected Settings(string path = "")
         {
             if (path is null) { return; }
@@ -103,10 +119,13 @@ namespace ShortTools.General
         }
 
 
+        private const string floatEnders = "fFdD";
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static bool MatchIsFloat(Match match, out float result)
         {
-            return float.TryParse(match.Groups[2].ToString(), out result);
+            string num = match.Groups[2].ToString();
+            if (floatEnders.Contains(num.Last(), StringComparison.InvariantCulture)) { num = num[..^1]; }
+            return float.TryParse(num, out result);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private bool IsFloatType(PropertyInfo info)
@@ -144,30 +163,10 @@ namespace ShortTools.General
 
 
 
-
-
-        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        private static bool FindDataInString([NotNull] string data, [NotNull] string item, out int index)
-        {
-            index = -1;
-
-            for (int i = 0; i < data.Length - item.Length + 1; i++)
-            {
-                for (int j = 0; j < item.Length; j++)
-                {
-                    if (data[i + j] != item[j]) { goto End; }
-                }
-                index = i;
-                return true;
-
-                End:;
-            }
-
-            return false;
-        }
-
-
-
+        /// <summary>
+        /// Saves the current settings values to the path given, overrides values if they are present, and if they are not it appends them to the bottom.
+        /// </summary>
+        /// <param name="path"></param>
         public void SaveSettings([NotNull] string path)
         {
             if (!File.Exists(path))
@@ -182,7 +181,7 @@ namespace ShortTools.General
 
             foreach (PropertyInfo prop in GetType().GetProperties())
             {
-                for (int i = 0; i < data.Count - prop.Name.Length + 1; i++)
+                for (int i = 0; i < data.Count; i++)
                 {
                     if (data[i][..prop.Name.Length] != prop.Name) { continue; }
 
@@ -230,25 +229,27 @@ namespace ShortTools.General
 
         internal Dictionary<string, Type[]> typesToOthers = new Dictionary<string, Type[]>()
         {
-            { "Numbers", [typeof(short), typeof(int), typeof(long), typeof(ushort), typeof(uint), typeof(ulong)] },
-            { "Decimals", [typeof(float), typeof(double)] },
+            { "Numbers", new Type[] { typeof(short), typeof(int), typeof(long), typeof(ushort), typeof(uint), typeof(ulong) } },
+            { "Decimals", new Type[] { typeof(float), typeof(double) } },
         };
     }
 
 
 
 
-
+#pragma warning disable
 
 
     internal class TestSettings : Settings
     {
         public TestSettings(string path = "") : base(path) { }
 
-        public string Test { get; set; }
-        public int AWd1 { get; set; }
-        public char Test3 { get; set; }
-        public float Test2 { get; set; }
+        public string Test { get; set; } = "";
+        public int AWd1 { get; set; } = 0;
+        public char Test3 { get; set; } = 'L';
+        public float Test2 { get; set; } = 1.34f;
+
+
 
         private static void Main(string[] args)
         {
