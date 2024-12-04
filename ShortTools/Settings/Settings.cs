@@ -41,12 +41,20 @@ namespace ShortTools.General
 
 
 
-
+        /// <summary>
+        /// Searches for a word, with either a non word character or the start of the line before it, then an equals, and then either an int, float, string, or char,
+        /// in the format:
+        /// <code>
+        /// varName = 3               // for ints
+        /// varName2 = 3.14f          // for floats
+        /// varName3 = "testing123"   // for strings
+        /// varName4 = 'a'            // for chars
+        /// </code>
+        /// </summary>
         private readonly Regex loadRegex = new Regex(@"(?:^|\W)([a-zA-Z]\w*) *= *((?:\d+\.\d+[fFdD]?)|(?:\d+)|(?:""\w*"")|(?:'\w'))[^.\W]*", RegexOptions.Compiled | RegexOptions.Multiline);
         /// <summary>
         /// Automatically called by the constructor if a path is passed in.
         /// </summary>
-        /// <returns>True if the settings loaded correctly</returns>
         public void LoadSettings(string path)
         {
             if (!File.Exists(path)) { throw new FileNotFoundException($"Could not find the file designated at {path}"); }
@@ -166,7 +174,7 @@ namespace ShortTools.General
         /// <summary>
         /// Saves the current settings values to the path given, overrides values if they are present, and if they are not it appends them to the bottom.
         /// </summary>
-        /// <param name="path"></param>
+        /// <param name="path">The path of where to save the settings.</param>
         public void SaveSettings([NotNull] string path)
         {
             if (!File.Exists(path))
@@ -198,6 +206,7 @@ namespace ShortTools.General
             File.WriteAllLines(path, data);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private string GetDisplayString(PropertyInfo prop)
         {
             if (IsStringType(prop))
@@ -237,6 +246,7 @@ namespace ShortTools.General
 
 
 
+    #region Tests
 #pragma warning disable
 
 
@@ -274,4 +284,6 @@ namespace ShortTools.General
             return Misc.GetDisplayString(this);
         }
     }
+
+    #endregion Tests
 }
