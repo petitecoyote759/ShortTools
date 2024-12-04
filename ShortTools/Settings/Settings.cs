@@ -68,9 +68,9 @@ namespace ShortTools.General
 
             foreach (Match match in group.Cast<Match>()) // Grrr
             {
-                PropertyInfo? info = GetType().GetProperty(match.Groups[1].ToString());
+                PropertyInfo? info = GetType().GetProperty(match.Groups[1].ToString()); // Gets the property with the name given by the settings file
 
-                if (info is null) { continue; }
+                if (info is null) { continue; } // if there was no property with that name, go to the next one.
 
 
                 if (MatchIsInt(match, out long result))
@@ -87,7 +87,7 @@ namespace ShortTools.General
 
                 else if (MatchIsFloat(match, out float fresult))
                 {
-                    if (IsFloatType(info))
+                    if (IsFloatType(info)) // if the property is a float, so it matches the float type of the match.
                     {
                         info.SetValue(this, fresult);
                     }
