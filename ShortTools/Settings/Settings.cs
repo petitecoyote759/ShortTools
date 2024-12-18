@@ -11,8 +11,6 @@ using System.Threading.Tasks;
 using static ShortTools.General.Prints;
 
 
-
-
 namespace ShortTools.General
 {
     /// <summary>
@@ -30,33 +28,28 @@ namespace ShortTools.General
     /// </code>
     /// You can also load these files to a class using either the constructor or the LoadSettings function
     /// </summary>
-    public abstract class Settings
+    public static class Settings
     {
-        /// <inheritdoc cref="Settings"/>
-        protected Settings(string path = "")
-        {
-            if (path is null) { return; }
-            if (path.Length != 0) { LoadSettings(path); }
-        }
-
-
-
         /// <summary>
         /// Searches for a word, with either a non word character or the start of the line before it, then an equals, and then either an int, float, string, or char,
-        /// in the format:
-        /// <code>
-        /// varName = 3               // for ints
-        /// varName2 = 3.14f          // for floats
-        /// varName3 = "testing123"   // for strings
-        /// varName4 = 'a'            // for chars
-        /// </code>
+        /// in the format: <br/>
+        /// <example>
+        /// <![CDATA[varName = 3               <- for ints   ]]>   <br/>   
+        /// <![CDATA[varName2 = 3.14f          <- for floats ]]>   <br/>
+        /// <![CDATA[varName3 = "testing123"   <- for strings]]>   <br/>
+        /// <![CDATA[varName4 = 'a'            <- for chars  ]]>   <br/>
+        /// </example>
         /// </summary>
-        private readonly Regex loadRegex = new Regex(@"(?:^|\W)([a-zA-Z]\w*) *= *((?:\d+\.\d+[fFdD]?)|(?:\d+)|(?:""\w*"")|(?:'\w'))[^.\W]*", RegexOptions.Compiled | RegexOptions.Multiline);
+        private static readonly Regex loadRegex = new Regex(@"(?:^|\W)([a-zA-Z]\w*) *= *((?:\d+\.\d+[fFdD]?)|(?:\d+)|(?:""\w*"")|(?:'\w'))[^.\W]*", RegexOptions.Compiled | RegexOptions.Multiline);
         /// <summary>
         /// Automatically called by the constructor if a path is passed in.
         /// </summary>
-        public void LoadSettings(string path)
+        /// <param name="path">The path of the settings file.</param>
+        /// <param name="obj">The object for the settings to be loaded into.</param>
+        public static void LoadSettings<T>(string path, T obj)
         {
+            if (obj is null) { return; }
+
             if (!File.Exists(path)) { throw new FileNotFoundException($"Could not find the file designated at {path}"); }
 
             string data = File.ReadAllText(path);
@@ -68,7 +61,7 @@ namespace ShortTools.General
 
             foreach (Match match in group.Cast<Match>()) // Grrr
             {
-                PropertyInfo? info = GetType().GetProperty(match.Groups[1].ToString()); // Gets the property with the name given by the settings file
+                PropertyInfo? info = obj.GetType().GetProperty(match.Groups[1].ToString()); // Gets the property with the name given by the settings file
 
                 if (info is null) { continue; } // if there was no property with that name, go to the next one.
 
@@ -77,11 +70,11 @@ namespace ShortTools.General
                 {
                     if (info.PropertyType == typeof(int))
                     {
-                        info.SetValue(this, (int)result);
+                        info.SetValue(obj, (int)result);
                     }
                     else if (info.PropertyType == typeof(long))
                     {
-                        info.SetValue(this, result);
+                        info.SetValue(obj, result);
                     }
                 }
 
@@ -89,7 +82,7 @@ namespace ShortTools.General
                 {
                     if (IsFloatType(info)) // if the property is a float, so it matches the float type of the match.
                     {
-                        info.SetValue(this, fresult);
+                        info.SetValue(obj, fresult);
                     }
                 }
 
@@ -97,7 +90,7 @@ namespace ShortTools.General
                 {
                     if (IsStringType(info))
                     {
-                        info.SetValue(this, match.Groups[2].ToString()[1..^1]);
+                        info.SetValue(obj, match.Groups[2].ToString()[1..^1]);
                     }
                 }
 
@@ -105,7 +98,7 @@ namespace ShortTools.General
                 {
                     if (IsCharType(info))
                     {
-                        info.SetValue(this, match.Groups[2].ToString()[1]);
+                        info.SetValue(obj, match.Groups[2].ToString()[1]);
                     }
                 }
             }
@@ -121,7 +114,7 @@ namespace ShortTools.General
             return long.TryParse(match.Groups[2].ToString(), out result);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private bool IsIntType(PropertyInfo info)
+        private static bool IsIntType(PropertyInfo info)
         {
             return typesToOthers["Numbers"].Contains(info.PropertyType);
         }
@@ -136,7 +129,7 @@ namespace ShortTools.General
             return float.TryParse(num, out result);
         }
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private bool IsFloatType(PropertyInfo info)
+        private static bool IsFloatType(PropertyInfo info)
         {
             return typesToOthers["Decimals"].Contains(info.PropertyType);
         }
@@ -175,8 +168,11 @@ namespace ShortTools.General
         /// Saves the current settings values to the path given, overrides values if they are present, and if they are not it appends them to the bottom.
         /// </summary>
         /// <param name="path">The path of where to save the settings.</param>
-        public void SaveSettings([NotNull] string path)
+        /// <param name="obj">The object for the settings to be saved to.</param>
+        public static void SaveSettings<T>([NotNull] string path, T obj) 
         {
+            if (obj is null) { return; }
+
             if (!File.Exists(path))
             {
                 File.Create(path).Dispose();
@@ -187,18 +183,18 @@ namespace ShortTools.General
 
             List<string> data = File.ReadAllLines(path).ToList();
 
-            foreach (PropertyInfo prop in GetType().GetProperties())
+            foreach (PropertyInfo prop in obj.GetType().GetProperties())
             {
                 for (int i = 0; i < data.Count; i++)
                 {
                     if (data[i][..prop.Name.Length] != prop.Name) { continue; }
 
-                    data[i] = GetDisplayString(prop);
+                    data[i] = GetDisplayString(prop, obj);
 
                     goto Next;
                 }
 
-                data.Add(GetDisplayString(prop));
+                data.Add(GetDisplayString(prop, obj));
 
                 Next:;
             }
@@ -207,28 +203,28 @@ namespace ShortTools.General
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private string GetDisplayString(PropertyInfo prop)
+        private static string GetDisplayString<T>(PropertyInfo prop, T obj)
         {
             if (IsStringType(prop))
             {
-                return $"{prop.Name} = \"{prop.GetValue(this)}\";";
+                return $"{prop.Name} = \"{prop.GetValue(obj)}\";";
             }
             else if (IsCharType(prop))
             {
-                return $"{prop.Name} = \'{prop.GetValue(this)}\';";
+                return $"{prop.Name} = \'{prop.GetValue(obj)}\';";
             }
             else if (IsFloatType(prop))
             {
-                return $"{prop.Name} = {prop.GetValue(this)}f;";
+                return $"{prop.Name} = {prop.GetValue(obj)}f;";
             }
             else if (IsIntType(prop))
             {
-                return $"{prop.Name} = {prop.GetValue(this)};";
+                return $"{prop.Name} = {prop.GetValue(obj)};";
             }
 
 
 
-            return $"{prop.Name} = {prop.GetValue(this)};";
+            return $"{prop.Name} = {prop.GetValue(obj)};";
         }
 
 
@@ -236,7 +232,7 @@ namespace ShortTools.General
 
 
 
-        internal Dictionary<string, Type[]> typesToOthers = new Dictionary<string, Type[]>()
+        internal static Dictionary<string, Type[]> typesToOthers = new Dictionary<string, Type[]>()
         {
             { "Numbers", new Type[] { typeof(short), typeof(int), typeof(long), typeof(ushort), typeof(uint), typeof(ulong) } },
             { "Decimals", new Type[] { typeof(float), typeof(double) } },
@@ -250,9 +246,10 @@ namespace ShortTools.General
 #pragma warning disable
 
 
-    internal class TestSettings : Settings
+
+    internal class TestSettings
     {
-        public TestSettings(string path = "") : base(path) { }
+        public TestSettings(string path = "") { Settings.LoadSettings(path, this); }
 
         public string Test { get; set; } = "";
         public int AWd1 { get; set; } = 0;
@@ -260,20 +257,12 @@ namespace ShortTools.General
         public float Test2 { get; set; } = 1.34f;
 
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SaveSettings(string path) => Settings.SaveSettings(path, this); 
+
 
         private static void Main(string[] args)
         {
-            
-            
-            TestSettings settings = new TestSettings("Settings.ini");
-
-            Print(settings.ToString());
-            
-            
-            settings.SaveSettings("Settings.ini");
-
-
-
 
         }
 

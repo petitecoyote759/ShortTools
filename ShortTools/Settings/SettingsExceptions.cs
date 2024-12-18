@@ -6,7 +6,4 @@ using System.Threading.Tasks;
 
 namespace ShortTools.General
 {
-    public class A
-    {
-    }
 }
