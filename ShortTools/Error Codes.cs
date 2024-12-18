@@ -21,7 +21,7 @@ namespace ShortTools.General
 
 
 
-        #region SDL
+        #region SDL 0x005
         /// <summary>
         /// Error caused by the SDL framework.
         /// </summary>
@@ -32,7 +32,23 @@ namespace ShortTools.General
 
         #region Settings
 
-        
+
+
+        #endregion
+
+
+
+
+        #region Vectors 0x001
+
+        /// <summary>
+        /// The 2 given vectors were different sizes, so it is impossible to do this operation.
+        /// </summary>
+        DifferentVectorSizes,
+        /// <summary>
+        /// The given vectors were not 3d.
+        /// </summary>
+        VectorsAreNot3D
 
         #endregion
     }

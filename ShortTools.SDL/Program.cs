@@ -12,7 +12,7 @@ namespace ShortTools.SDL
 
         internal static void Main(string[] args)
         {
-            using Renderer rendy = new Renderer(Draw, RendererFlags.AutoRenderDraw | RendererFlags.PrintDebugLogs);
+            using Renderer rendy = new Renderer(Draw, Handle, flag: RendererFlags.AutoRenderDraw | RendererFlags.PrintDebugLogs | RendererFlags.DebugKeyInputs);
             renderer = rendy;
 
 
@@ -20,10 +20,26 @@ namespace ShortTools.SDL
 
             Thread.Sleep(5000);
 
-            renderer.Pause(2000);
-
             Thread.Sleep(5000);
         }
+
+
+
+
+        internal static void Handle(SDL_Keycode key, bool down)
+        {
+
+        }
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -66,25 +82,4 @@ namespace ShortTools.SDL
 
 
 
-
-
-
-
-#pragma warning disable
-    /// <summary>
-    /// 
-    /// </summary>
-    public class ShortException : Exception
-    {
-        public ShortException(ErrorCode errorCode, string message) : base(message) 
-        { ErrorCode = errorCode; }
-        public ShortException(ErrorCode errorCode) : base() 
-        { ErrorCode = errorCode; }
-        public ShortException(ErrorCode errorCode, string message, Exception innerException) : base(message, innerException) 
-        { ErrorCode = errorCode; }
-
-
-        public readonly ErrorCode ErrorCode;
-    }
-#pragma warning restore
 }

@@ -1,16 +1,20 @@
 ﻿using SDL2;
 using ShortTools.General;
 using System.Diagnostics.CodeAnalysis;
-using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 using static SDL2.SDL;
-using static ShortTools.General.Prints;
-using static ShortTools.SDL.ZeroExtention;
+
+
+
 
 
 namespace ShortTools.SDL
 {
-    internal static class ZeroExtention
+    /// <summary>
+    /// DO NOT USE!!! this adds a single extention for the <see cref="int">int</see> type that checks if the value is 0, it is not intended for public use.
+    /// </summary>
+    [Obsolete("Not intended for public use.", false, UrlFormat = WarningCodes.URL, DiagnosticId = WarningCodes.NotForPublicUse)]
+    public static class ZeroExtention
     {
         /// <summary>
         /// Checks if the value is != 0, makes some code more readable
@@ -24,9 +28,6 @@ namespace ShortTools.SDL
 
 
 
-
-
-    Do Handler
 
 
 
@@ -78,6 +79,12 @@ namespace ShortTools.SDL
         /// Prints the internal ShortTools debug logs to the console.
         /// </summary>
         PrintDebugLogs = 2,
+
+
+        /// <summary>
+        /// Adds the key inputs to the debugger logs to allow you to see what buttons are working and what their names are.
+        /// </summary>
+        DebugKeyInputs = 4,
     }
 
 
@@ -100,7 +107,7 @@ namespace ShortTools.SDL
     /// <code> renderer.Dispose(); </code>
     /// as it contains unmanaged objects. 
     /// </summary>
-    public sealed class Renderer : IDisposable
+    public sealed partial class Renderer : IDisposable
     {
         int screenwidth = -1;
         int screenheight = -1;
@@ -138,14 +145,11 @@ namespace ShortTools.SDL
         private static void SleepAction(SDLRenderer SDLrenderer, SDLWindow window) { Thread.Sleep(50); }
 
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="Render"></param>
-        /// <param name="flag"></param>
-        public Renderer(Action<SDLRenderer, SDLWindow>? Render = null, RendererFlags flag = RendererFlags.None)
+        /// <inheritdoc cref="Renderer"/>
+        public Renderer(Action<SDLRenderer, SDLWindow>? Render = null, Action<SDL_Keycode, bool>? Handle = null, RendererFlags flag = RendererFlags.None)
         {
             this.Render = Render ?? SleepAction;
+            this.Handle = Handle ?? EmptyHandle;
             flags = flag;
 
             try
@@ -240,6 +244,7 @@ namespace ShortTools.SDL
 
             while (renderer.running)
             {
+                renderer.HandleInputs();
                 Actions();
 
                 if (renderer.sleeping)
@@ -322,16 +327,7 @@ namespace ShortTools.SDL
         {
             DrawImage(x, y, w, h, images[image], angle, flip);
         }
-        /// <summary>
-        /// Draws the image at the given x and y values (represtenting the top left of the image), at the angle given and flipped if told to.
-        /// </summary>
-        /// <param name="x">The x position of the top left corner in pixels.</param>
-        /// <param name="y">The y position of the top left corner in pixels.</param>
-        /// <param name="h">The height in pixels.</param>
-        /// <param name="w">The width in pixels.</param>
-        /// <param name="image">A pointer to the image to be drawn, this should not be used normally, instead use the path as a string.</param>
-        /// <param name="angle">The angle of the image to be drawn in degrees.</param>
-        /// <param name="flip">An enum value represting if the image should be flipped horizontally or vertically.</param>
+        /// <inheritdoc cref="Draw(int, int, int, int, string, double, SDL_RendererFlip)"/>
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public void Draw(int x, int y, int w, int h, IntPtr image, double angle = 0d, SDL_RendererFlip flip = SDL_RendererFlip.SDL_FLIP_NONE)
         {
@@ -368,6 +364,20 @@ namespace ShortTools.SDL
             if (setup) { return; }
 
             setup = true;
+
+
+
+
+
+            if (this.flags.HasFlag(RendererFlags.DebugKeyInputs))
+            {
+                Handle += (SDL_Keycode code, bool down) =>
+                {
+                    if (down) { debugger?.AddLog(code.ToString(), WarningLevel.Debug); }
+                };
+            }
+
+
 
 
 
@@ -457,7 +467,7 @@ namespace ShortTools.SDL
 
             if (!LoadImages() || images.Count == 0)
             {
-                debugger.AddLog("Loading with no images", WarningLevel.Debug);
+                debugger.AddLog("Loading with no images", WarningLevel.Warning);
             }
         }
 
@@ -526,7 +536,7 @@ namespace ShortTools.SDL
 
         /// <summary>
         /// Loads an image from the given path into the images dictionary and returns the pointer. If you do not want it to load into the image dictionary,
-        /// call LoadImageNoDict.
+        /// call <see cref="LoadImageNoDict(string)">LoadImageNoDict</see>.
         /// </summary>
         /// <param name="path"></param>
         /// <param name="key">The key of the image in the images dictionary.</param>
@@ -538,7 +548,7 @@ namespace ShortTools.SDL
             return image;
         }
         /// <summary>
-        /// Loads an image from the given path and returns the pointer to the image. To load the image into the image dictionary, call LoadImage.
+        /// Loads an image from the given path and returns the pointer to the image. To load the image into the image dictionary, call <see cref="LoadImage(string, string?)">LoadImage</see>.
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
@@ -556,7 +566,7 @@ namespace ShortTools.SDL
 
 
         /// <summary>
-        /// If the operation fails, adds a log to the debugger.
+        /// If the operation fails, adds a log to the debugger. To not do this and improve speed, call <see cref="SetRenderColourFast(byte, byte, byte, byte)">SetRenderColourFast</see>.
         /// </summary>
         /// <param name="r">red value.</param>
         /// <param name="g">green value.</param>
@@ -573,7 +583,7 @@ namespace ShortTools.SDL
             return false;
         }
         /// <summary>
-        /// Same as SetRenderColour but faster due to no error checking, use this if you need to squeeze out a little more performance.
+        /// Same as <see cref="SetRenderColour(byte, byte, byte, byte)">SetRenderColour</see> but faster due to no error checking, use this if you need to squeeze out a little more performance.
         /// </summary>
         /// <param name="r">red value.</param>
         /// <param name="g">green value.</param>
@@ -625,31 +635,25 @@ namespace ShortTools.SDL
 
 
 
-
+    
 
     /// <summary>
-    /// 
+    /// An exception for when an issue with SDL occurs in a short tools based program.
     /// </summary>
     public class SDLError : ShortException
     {
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="message"></param>
+        /// <inheritdoc cref="SDLError"/>
+        /// <param name="message">The message to be displayed.</param>
         public SDLError(string message) : base(ShortTools.General.ErrorCode.SDLError, message) 
         { }
 
-        /// <summary>
-        /// 
-        /// </summary>
+        /// <inheritdoc cref="SDLError"/>
         public SDLError() : base(ShortTools.General.ErrorCode.SDLError, "SDL caused a fatal error.")
         { }
 
-        /// <summary>
-        /// 
-        /// </summary>
-        /// <param name="message"></param>
+        /// <inheritdoc cref="SDLError"/>
+        /// <param name="message"><inheritdoc cref="SDLError(string)"/></param>
         /// <param name="innerException"></param>
         public SDLError(string message, Exception innerException) : base(ShortTools.General.ErrorCode.SDLError, message, innerException)
         { }

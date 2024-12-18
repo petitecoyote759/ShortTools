@@ -12,8 +12,8 @@ namespace ShortTools.General
     internal static class WarningCodes
     {
         public const string Depreciated = "ST0001";
-
-
+        public const string NotForPublicUse = "ST0002";
+        public const string NotFullyCoded = "ST0003";
 
 
 

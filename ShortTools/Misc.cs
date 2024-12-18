@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 
 namespace ShortTools.General
 {
+    /// <summary>
+    /// Holds all of the different misc tools.
+    /// </summary>
     public static class Misc
     {
         /// <summary>
@@ -102,7 +105,7 @@ namespace ShortTools.General
         /// <typeparam name="T"> The type of the object given </typeparam>
         /// <param name="obj"> The object to be displayed </param>
         /// <returns> A string in the format given in the summary </returns>
-        public static string GetDisplayString<T>(T obj)
+        public static string GetDisplayString<T>(T obj) where T : notnull
         {
             StringBuilder values = new StringBuilder();
 
@@ -145,13 +148,13 @@ namespace ShortTools.General
             PropertyInfo[] props = obj.GetType().GetProperties();
             foreach (PropertyInfo prop in props)
             {
-                Type type = prop.GetValue(obj).GetType();
+                Type? type = prop.GetValue(obj)?.GetType();
                 object? value = prop.GetValue(obj);
 
 
                 values.AppendLine(
 
-                    (types.ContainsKey(type.ToString()) ? types[type.ToString()] : type) + " : " +
+                    (types.ContainsKey(type?.ToString() ?? "Error") ? types[type?.ToString() ?? "Error"] : type) + " : " +
 
                     prop.Name + " = " +
 
@@ -164,4 +167,35 @@ namespace ShortTools.General
             return values.ToString();
         }
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+#pragma warning disable
+    /// <summary>
+    /// 
+    /// </summary>
+    public class ShortException : Exception
+    {
+        public ShortException(ErrorCode errorCode, string message) : base(message)
+        { ErrorCode = errorCode; }
+        public ShortException(ErrorCode errorCode) : base()
+        { ErrorCode = errorCode; }
+        public ShortException(ErrorCode errorCode, string message, Exception innerException) : base(message, innerException)
+        { ErrorCode = errorCode; }
+
+
+        public readonly ErrorCode ErrorCode;
+    }
+#pragma warning restore
 }
