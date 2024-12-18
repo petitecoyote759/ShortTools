@@ -1,16 +1,19 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Globalization;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
+using System.Xml.Serialization;
+using static ShortTools.General.Prints;
 
 
-
-namespace ShortTools.General
+namespace ShortTools.General.Vectors
 {
     /// <summary>
     /// An integer vector, contains 2 values and functions like the dot product can be calculated.
     /// </summary>
-    public struct IVector2 : IEquatable<IVector2>
+    public struct IVector2 : IEquatable<IVector2>, ICloneable, IComparable<Vector2>, IComparable<IVector2>, IFormattable
     {
         #region x and y
 #pragma warning disable CA1051 // Dont declare visible instance fields, i dont care cause this is faster
@@ -359,7 +362,7 @@ namespace ShortTools.General
         #endregion
 
 
-        #region Equality
+        #region Equality and Comparisons
 
         /// <summary>
         /// Checks if the object is an integer vector, and then compares the content
@@ -404,6 +407,219 @@ namespace ShortTools.General
         /// <param name="right"></param>
         /// <returns></returns>
         public static bool operator !=(IVector2 left, IVector2 right) => left.x != right.x || left.y != right.y;
+
+
+        /// <summary>
+        /// Compares the magnitudes of the 2 vectors.
+        /// </summary>
+        /// <param name="left">The first vector to be compared</param>
+        /// <param name="right">The second vector to be compared</param>
+        /// <returns>True, if the magnitude of the left value is less than the magnitude of the right</returns>
+        public static bool operator <(IVector2 left, IVector2 right) => left.MagSquared() < right.MagSquared();
+        /// <summary><inheritdoc cref="operator {(IVector2, IVector2)"/></summary>
+        /// <returns>True, if the magnitude of the left value is less than or equal to the magnitude of the right</returns>
+        public static bool operator <=(IVector2 left, IVector2 right) => left.MagSquared() <= right.MagSquared();
+        /// <summary><inheritdoc cref="operator {(IVector2, IVector2)"/></summary>
+        /// <returns>True, if the magnitude of the left value is greater than than the magnitude of the right</returns>
+        public static bool operator >(IVector2 left, IVector2 right) => left.MagSquared() > right.MagSquared();
+        /// <summary><inheritdoc cref="operator {(IVector2, IVector2)"/></summary>
+        /// <returns>True, if the magnitude of the left value is greater than than or equal to the magnitude of the right</returns>
+        public static bool operator >=(IVector2 left, IVector2 right) => left.MagSquared() >= right.MagSquared();
+
+
+        #endregion
+
+
+        #region Indexing
+        /*
+        public T? UseIndex<T>([NotNullIfNotNull(nameof(data))] IList<IList<T>> data)
+        {
+            if (data is null) { return default; }
+            return data[x][y];
+        }
+
+        public T? UseIndex<T>([NotNullIfNotNull(nameof(data))] this IList<IList<T>> data, IVector2 vector)
+        {
+            if (data is null) { return default; }
+            return data[vector.x][vector.y];
+        }
+        */
+        #endregion
+
+
+        #region Others
+
+
+        /// <summary>
+        /// Returns the magnitude of this vector squared.
+        /// </summary>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        public readonly float MagSquared()
+        {
+            return DotProduct(this);
+        }
+
+
+        /// <summary>
+        /// Returns the magnitude of this vector.
+        /// </summary>
+        /// <returns></returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        public readonly float Magnitude()
+        {
+            return MathF.Sqrt(MagSquared());
+        }
+        /// <inheritdoc cref="Magnitude"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public readonly float Mag() => Magnitude();
+        /// <inheritdoc cref="Magnitude"/>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public readonly float Length() => Magnitude();
+
+
+        /// <summary>
+        /// Returns the rough mag, given by <br/>
+        /// |x1 - x2| + |y1 - y2|
+        /// </summary>
+        /// <returns></returns>
+        public readonly int RoughMag()
+        {
+            return Math.Abs(x) + Math.Abs(y);
+        }
+        /// <inheritdoc cref="RoughMag()"/>
+        public readonly int RoughMag(IVector2 vector)
+        {
+            return Math.Abs(x - vector.x) + Math.Abs(y - vector.y);
+        }
+
+        #endregion
+
+
+
+
+
+
+        #region Cloning
+
+        /// <summary>
+        /// Clones the IVector2, returning a copy with the same x and y values.
+        /// </summary>
+        /// <returns></returns>
+        public readonly object Clone()
+        {
+            return new IVector2(x, y);
+        }
+
+        #endregion
+
+
+        #region Comparable
+
+        /// <summary>
+        /// Compares the lengths of the 2 vectors. When this vector has a lower length than the parameter vector, -1 will be returned. If the vectors are the same length
+        /// then it will return 0. And if the parameter vector is smaller than this vector, then it will return 1.
+        /// </summary>
+        /// <param name="other"></param>
+        /// <returns></returns>
+        public readonly int CompareTo(Vector2 other)
+        {
+            float dist = Magnitude() - other.Length();
+            if (dist < 0) { return -1; }
+            else if (dist > 0) { return 1; }
+            return 0;
+        }
+
+
+        /// <inheritdoc cref="CompareTo(Vector2)"/>
+        public readonly int CompareTo(IVector2 other)
+        {
+            float dist = Magnitude() - other.Magnitude();
+            if (dist < 0) { return -1; }
+            else if (dist > 0) { return 1; }
+            return 0;
+        }
+
+
+        #endregion
+
+
+        #region Serialization
+
+        /// <summary>
+        /// Creates a string representing the data of the vector, allowing you to do
+        /// <code>
+        /// vector.ToString("I can put any words in here but then to get the values i do {x} or {y}");
+        /// </code>
+        /// The string will then have {x} and {y} be replaced with the x and y values.
+        /// </summary>
+        /// <param name="format">The string to have its {x} and {y} to be changed</param>
+        /// <param name="formatProvider">The format provider used for the int.ToString, defaults to 
+        /// <see cref="CultureInfo.InvariantCulture">CultureInfo.InvariantCulture</see>
+        /// </param>
+        /// <returns></returns>
+        public readonly string ToString(string? format, IFormatProvider? formatProvider = null)
+        {
+            if (format is null) { return this.ToString(); }
+            if (format.Length < 3) { return this.ToString(); }
+
+            formatProvider ??= CultureInfo.InvariantCulture;
+
+
+            bool checking = true;
+            while (checking)
+            {
+                int i;
+                for (i = 0; i < format.Length - 2; i++)
+                {
+                    if (i == format.Length - 3) { checking = false; }
+                    // if format part goes {x}
+                    if (format[i] == '{' && format[i + 2] == '}')
+                    {
+                        if (IsX(format[i + 1]))
+                        {
+                            format = format[..i] + x.ToString(formatProvider) + format[(i + 3)..];
+                        }
+                        else if (IsY(format[i + 1]))
+                        {
+                            format = format[..i] + y.ToString(formatProvider) + format[(i + 3)..];
+                        }
+                    }
+                }
+            }
+
+            return format;
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        static bool IsX(char test)
+        {
+            return "x".Contains(test, StringComparison.InvariantCultureIgnoreCase);
+        }
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        static bool IsY(char test)
+        {
+            return "y".Contains(test, StringComparison.InvariantCultureIgnoreCase);
+        }
+
+
+
+        #endregion
+
+
+        
+
+
+
+
+
+
+
+        #region Tests
+
+        internal static void Main()
+        {
+            Print(new IVector2(1, 4).ToString("wow so many cool words this is so cool!!! ({x} + {y})", CultureInfo.InvariantCulture));
+        }
 
         #endregion
     }
