@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 
 [assembly: InternalsVisibleTo("ShortTools.SDL")]
+[assembly: InternalsVisibleTo("ShortTools.Simulations")]
 
 namespace ShortTools.General
 {
@@ -20,6 +21,6 @@ namespace ShortTools.General
 
 
 
-        public const string URL = "https://www.nuget.org/packages/Short_Tools";
+        public const string URL = "https://www.nuget.org/packages/ShortTools2";
     }
 }

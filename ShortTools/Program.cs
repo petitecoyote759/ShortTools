@@ -4,6 +4,9 @@ using System.Text;
 
 namespace ShortTools.General
 {
+
+
+
     /// <summary>
     /// Static class for writing to the console, but with added features like automatically printing the data contained in an array, rather than just the array type.
     /// </summary>

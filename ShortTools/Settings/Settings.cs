@@ -263,7 +263,8 @@ namespace ShortTools.General
 
         private static void Main(string[] args)
         {
-
+            TestSettings settings = new TestSettings();
+            Settings.LoadSettings("Settings.ini", settings);
         }
 
 

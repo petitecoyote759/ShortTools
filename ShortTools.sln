@@ -7,6 +7,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShortTools.General", "Short
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "ShortTools.SDL", "ShortTools.SDL\ShortTools.SDL.csproj", "{BFEA40EE-6CCC-48EE-9D36-DE5D6DA032F5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShortTools.Simulations", "ShortTools.Simulations\ShortTools.Simulations.csproj", "{EC5AF099-5A42-499C-A197-582558D1FACF}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShortTools.AStar", "ShortTools.AStar\ShortTools.AStar.csproj", "{0CD69CB3-8CF6-4BAE-A81A-0C807BCD9426}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +25,14 @@ Global
 		{BFEA40EE-6CCC-48EE-9D36-DE5D6DA032F5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BFEA40EE-6CCC-48EE-9D36-DE5D6DA032F5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BFEA40EE-6CCC-48EE-9D36-DE5D6DA032F5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{EC5AF099-5A42-499C-A197-582558D1FACF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{EC5AF099-5A42-499C-A197-582558D1FACF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{EC5AF099-5A42-499C-A197-582558D1FACF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{EC5AF099-5A42-499C-A197-582558D1FACF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0CD69CB3-8CF6-4BAE-A81A-0C807BCD9426}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0CD69CB3-8CF6-4BAE-A81A-0C807BCD9426}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0CD69CB3-8CF6-4BAE-A81A-0C807BCD9426}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0CD69CB3-8CF6-4BAE-A81A-0C807BCD9426}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
