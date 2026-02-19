@@ -9,24 +9,26 @@ namespace ShortTools.AStar
 {
     internal class AStarNode
     {
+        // <<Class Variables>> //
         public int x;
         public int y;
         public float pathLength;
         public AStarNode? parent;
 
 
-        public AStarNode(int inpX, int inpY, AStarNode? parent, float pathLength, int endX, int endY, Func<int, int, float> GetTileHeuristic, bool diagonals)
+        // Creates a node with the given inputs and creates a heuristic for it
+        public AStarNode(int inpX, int inpY, AStarNode? parent, float pathLength, int endX, int endY, bool diagonals)
         {
             x = inpX; y = inpY;
             this.pathLength = pathLength;
             this.parent = parent;
-            GenerateHeuristic(endX, endY, GetTileHeuristic, diagonals);
+            GenerateHeuristic(endX, endY, diagonals);
         }
 
 
         public float heuristic;
 
-        private void GenerateHeuristic(int endX, int endY, Func<int, int, float> GetTileHeuristic, bool diagonals)
+        private void GenerateHeuristic(int endX, int endY, bool diagonals)
         {
             if (diagonals)
             {
