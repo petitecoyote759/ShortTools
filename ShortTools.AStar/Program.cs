@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Xml.Linq;
 using ShortTools.AStar;
@@ -36,7 +37,7 @@ namespace ShortTools.AStar
 
 
 
-
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         private void UpdateTile(int x, int y, float pathLength, AStarNode parent, int endX, int endY, int startX, int startY)
         {
             if (Math.Abs(x - startX) > maxDist || Math.Abs(y - startY) > maxDist) { return; }
@@ -153,7 +154,7 @@ namespace ShortTools.AStar
     internal class Tester
     {
         // <<Program Settings>> //
-        const bool printMap = true;
+        const bool printMap = false;
 
 
 
