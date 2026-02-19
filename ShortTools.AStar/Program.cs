@@ -89,7 +89,7 @@ namespace ShortTools.AStar
                 { (startX, startY), startNode }
             };
             toVisitNodes = new PriorityQueue<AStarNode, float>();
-            toVisitNodes.Enqueue(startNode, float.MaxValue);
+            toVisitNodes.Enqueue(startNode, 0);
 
             while (toVisitNodes.Count > 0)
             {
@@ -152,6 +152,13 @@ namespace ShortTools.AStar
 
     internal class Tester
     {
+        // <<Program Settings>> //
+        const bool printMap = true;
+
+
+
+
+        // <<Main Code>> //
         private static void Main()
         {
             char[][] map = new char[][]
@@ -181,11 +188,14 @@ namespace ShortTools.AStar
                 maxDist: 500
                 );
 
-            Console.Write(' ');
-            PrintMap((character) => Console.Write($" {character} "), map);
+            if (printMap)
+            {
+                Console.Write(' ');
+                PrintMap((character) => Console.Write($" {character} "), map);
+            }
 
             Stopwatch watch = new Stopwatch();
-            const long itterations = 100;
+            const long itterations = 10000;
             Queue<Vector2>? path = null;
 
             watch.Start();
@@ -206,9 +216,11 @@ namespace ShortTools.AStar
                 count++;
             }
 
-
-            Console.Write("\n\n\n ");
-            PrintMap((character) => Console.Write($" {character} "), map);
+            if (printMap)
+            {
+                Console.Write("\n\n\n ");
+                PrintMap((character) => Console.Write($" {character} "), map);
+            }
         }
 
         private static bool Walkable(int x, int y, char[][] map)
