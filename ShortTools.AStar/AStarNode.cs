@@ -15,28 +15,29 @@ namespace ShortTools.AStar
         public AStarNode? parent;
 
 
-        public AStarNode(Vector2 inp, AStarNode? parent, float pathLength, Vector2 end, Func<int, int, float> GetTileHeuristic)
+        public AStarNode(int inpX, int inpY, AStarNode? parent, float pathLength, int endX, int endY, Func<int, int, float> GetTileHeuristic, bool diagonals)
         {
-            x = (int)inp.X; y = (int)inp.Y;
+            x = inpX; y = inpY;
             this.pathLength = pathLength;
             this.parent = parent;
-            GenerateHeuristic(end, GetTileHeuristic);
-        }
-        public AStarNode(int x, int y, AStarNode? parent, float pathLength, Vector2 end, Func<int, int, float> GetTileHeuristic)
-        {
-            this.x = x;
-            this.y = y;
-            this.parent = parent;
-            this.pathLength = pathLength;
-            GenerateHeuristic(end, GetTileHeuristic);
+            GenerateHeuristic(endX, endY, GetTileHeuristic, diagonals);
         }
 
 
         public float heuristic;
 
-        private float GenerateHeuristic(Vector2 end, Func<int, int, float> GetTileHeuristic)
+        private void GenerateHeuristic(int endX, int endY, Func<int, int, float> GetTileHeuristic, bool diagonals)
         {
-            return (end - new Vector2(x, y)).Length();
+            if (diagonals)
+            {
+                int dx = Math.Abs(endX - x);
+                int dy = Math.Abs(endY - y);
+                heuristic = Math.Max(dx, dy);
+            }
+            else
+            {
+                heuristic = Math.Abs(endX - x) + Math.Abs(endY - y);
+            }
         }
     }
 }

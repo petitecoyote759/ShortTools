@@ -18,8 +18,9 @@ namespace ShortTools.AStar
         Func<int, int, bool> Walkable;
         Func<int, int, float> GetTileHeuristic;
 
-        QuadTree visitedNodes;
-        List<AStarNode> toVisitNodes;
+
+        Dictionary<(int x, int y), AStarNode> visitedNodes;
+        PriorityQueue<AStarNode, float> toVisitNodes;
         public bool useDiagonals { private get; set; }
         public int maxDist { private get; set; }
 
@@ -36,13 +37,13 @@ namespace ShortTools.AStar
 
 
 
-        private void UpdateTile(int x, int y, float pathLength, AStarNode parent, Vector2 end, Vector2 start)
+        private void UpdateTile(int x, int y, float pathLength, AStarNode parent, int endX, int endY, int startX, int startY)
         {
-            if (Math.Abs(x - start.X) > maxDist || Math.Abs(y - start.Y) > maxDist) { return; }
+            if (Math.Abs(x - startX) > maxDist || Math.Abs(y - startY) > maxDist) { return; }
             if (!Walkable(x, y)) { return; }
 
 
-            AStarNode? foundNode = visitedNodes.GetValue(x, y);
+            AStarNode? foundNode = visitedNodes.TryGetValue((x, y), out AStarNode? value) ? value : null;
             //foreach (AStarNode node in visitedNodes)
             //{
             //    if (node.x == x && node.y == y)
@@ -63,10 +64,10 @@ namespace ShortTools.AStar
             }
             else
             {
-                AStarNode newNode = new AStarNode(x, y, parent, pathLength, end, GetTileHeuristic);
+                AStarNode newNode = new AStarNode(x, y, parent, pathLength, endX, endY, GetTileHeuristic, useDiagonals);
 
-                visitedNodes.AddValue(newNode);
-                toVisitNodes.Add(newNode);
+                visitedNodes[(x, y)] = newNode;
+                toVisitNodes.Enqueue(newNode, newNode.pathLength + newNode.heuristic);
             }
 
 
@@ -79,19 +80,27 @@ namespace ShortTools.AStar
 
 
 
-        public Queue<Vector2> GetPath(Vector2 start, Vector2 end)
+        public Queue<Vector2> GetPath(int startX, int startY, int endX, int endY)
         {
-            AStarNode startNode = new AStarNode(start, null, 0f, end, GetTileHeuristic);
+            AStarNode startNode = new AStarNode(startX, startY, null, 0f, endX, endY, GetTileHeuristic, useDiagonals);
 
-            visitedNodes = new QuadTree(startNode);
-            toVisitNodes = new List<AStarNode>() { startNode };
+            visitedNodes = new Dictionary<(int x, int y), AStarNode>
+            {
+                { (startX, startY), startNode }
+            };
+            toVisitNodes = new PriorityQueue<AStarNode, float>();
+            toVisitNodes.Enqueue(startNode, float.MaxValue);
 
             while (toVisitNodes.Count > 0)
             {
                 AStarNode? smallestNode = null;
-                float smallestNodeValue = -1;
+                //float smallestNodeValue = -1;
 
 
+
+
+                smallestNode = toVisitNodes.Dequeue();
+                /*
                 foreach (AStarNode node in toVisitNodes) // <- next point to fix
                 {
                     float currentNodeValue = node.pathLength + node.heuristic;
@@ -102,7 +111,8 @@ namespace ShortTools.AStar
                         smallestNodeValue = currentNodeValue;
                     }
                 }
-                if (smallestNode?.x == (int)end.X && smallestNode?.y == (int)end.Y)
+                */
+                if (smallestNode?.x == endX && smallestNode?.y == endY)
                 {
                     Queue<Vector2> path = new Queue<Vector2>();
 
@@ -118,21 +128,21 @@ namespace ShortTools.AStar
 
 
 
-                UpdateTile(smallestNode.x + 1, smallestNode.y, smallestNode.pathLength + (1 * GetTileHeuristic(smallestNode.x + 1, smallestNode.y)), smallestNode, end, start);
-                UpdateTile(smallestNode.x - 1, smallestNode.y, smallestNode.pathLength + (1 * GetTileHeuristic(smallestNode.x - 1, smallestNode.y)), smallestNode, end, start);
-                UpdateTile(smallestNode.x, smallestNode.y + 1, smallestNode.pathLength + (1 * GetTileHeuristic(smallestNode.x, smallestNode.y + 1)), smallestNode, end, start);
-                UpdateTile(smallestNode.x, smallestNode.y - 1, smallestNode.pathLength + (1 * GetTileHeuristic(smallestNode.x, smallestNode.y - 1)), smallestNode, end, start);
+                UpdateTile(smallestNode.x + 1, smallestNode.y, smallestNode.pathLength + (1 * GetTileHeuristic(smallestNode.x + 1, smallestNode.y)), smallestNode, endX, endY, startX, endY);
+                UpdateTile(smallestNode.x - 1, smallestNode.y, smallestNode.pathLength + (1 * GetTileHeuristic(smallestNode.x - 1, smallestNode.y)), smallestNode, endX, endY, startX, endY);
+                UpdateTile(smallestNode.x, smallestNode.y + 1, smallestNode.pathLength + (1 * GetTileHeuristic(smallestNode.x, smallestNode.y + 1)), smallestNode, endX, endY, startX, endY);
+                UpdateTile(smallestNode.x, smallestNode.y - 1, smallestNode.pathLength + (1 * GetTileHeuristic(smallestNode.x, smallestNode.y - 1)), smallestNode, endX, endY, startX, endY);
 
                 if (useDiagonals)
                 {
-                    UpdateTile(smallestNode.x + 1, smallestNode.y + 1, smallestNode.pathLength + (1.41f * GetTileHeuristic(smallestNode.x + 1, smallestNode.y)), smallestNode, end, start);
-                    UpdateTile(smallestNode.x - 1, smallestNode.y + 1, smallestNode.pathLength + (1.41f * GetTileHeuristic(smallestNode.x - 1, smallestNode.y)), smallestNode, end, start);
-                    UpdateTile(smallestNode.x + 1, smallestNode.y - 1, smallestNode.pathLength + (1.41f * GetTileHeuristic(smallestNode.x, smallestNode.y + 1)), smallestNode, end, start);
-                    UpdateTile(smallestNode.x - 1, smallestNode.y - 1, smallestNode.pathLength + (1.41f * GetTileHeuristic(smallestNode.x, smallestNode.y - 1)), smallestNode, end, start);
+                    UpdateTile(smallestNode.x + 1, smallestNode.y + 1, smallestNode.pathLength + (1.41f * GetTileHeuristic(smallestNode.x + 1, smallestNode.y)), smallestNode, endX, endY, startX, startY);
+                    UpdateTile(smallestNode.x - 1, smallestNode.y + 1, smallestNode.pathLength + (1.41f * GetTileHeuristic(smallestNode.x - 1, smallestNode.y)), smallestNode, endX, endY, startX, startY);
+                    UpdateTile(smallestNode.x + 1, smallestNode.y - 1, smallestNode.pathLength + (1.41f * GetTileHeuristic(smallestNode.x, smallestNode.y + 1)), smallestNode, endX, endY, startX, startY);
+                    UpdateTile(smallestNode.x - 1, smallestNode.y - 1, smallestNode.pathLength + (1.41f * GetTileHeuristic(smallestNode.x, smallestNode.y - 1)), smallestNode, endX, endY, startX, startY);
                 }
 
 
-                toVisitNodes.Remove(smallestNode);
+                //toVisitNodes.Remove(smallestNode); // no need to remove it anymore, dequeue does that
             }
 
             return new Queue<Vector2>();
@@ -199,7 +209,7 @@ namespace ShortTools.AStar
             watch.Start();
             for (long i = 0; i < itterations; i++)
             {
-                path = pather.GetPath(new Vector2(0, 0), new Vector2(width - 1, height - 1));
+                path = pather.GetPath(0, 0, width - 1, height - 1);
             }
             watch.Stop();
 
@@ -258,7 +268,7 @@ namespace ShortTools.AStar
                 map[x] = new char[height];
                 for (int y = 0; y < height; y++)
                 {
-                    map[x][y] = RandomNumberGenerator.GetInt32(0, 4) != 0 ? ' ' : 'X'; // 25% chance for 'X', 75% chance for ' '
+                    map[x][y] = RandomNumberGenerator.GetInt32(0, 3) != 0 ? ' ' : 'X'; // 25% chance for 'X', 75% chance for ' '
                 }
             }
 
