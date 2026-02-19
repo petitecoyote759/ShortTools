@@ -94,36 +94,18 @@ namespace ShortTools.AStar
             while (toVisitNodes.Count > 0)
             {
                 AStarNode? smallestNode = null;
-                //float smallestNodeValue = -1;
-
-
-
 
                 smallestNode = toVisitNodes.Dequeue();
-                /*
-                foreach (AStarNode node in toVisitNodes) // <- next point to fix
-                {
-                    float currentNodeValue = node.pathLength + node.heuristic;
-
-                    if (smallestNode is null || smallestNodeValue > currentNodeValue)
-                    {
-                        smallestNode = node;
-                        smallestNodeValue = currentNodeValue;
-                    }
-                }
-                */
                 if (smallestNode?.x == endX && smallestNode?.y == endY)
                 {
-                    Queue<Vector2> path = new Queue<Vector2>();
-
-                    while (true)
+                    AStarNode? node = smallestNode;
+                    Stack<Vector2> stack = new();
+                    while (node != null)
                     {
-                        path.Enqueue(new Vector2(smallestNode.x, smallestNode.y));
-                        smallestNode = smallestNode.parent;
-                        if (smallestNode is null) { break; }
+                        stack.Push(new Vector2(node.x, node.y));
+                        node = node.parent;
                     }
-                    path = new Queue<Vector2>(path.Reverse());
-                    return path;
+                    return new Queue<Vector2>(stack);
                 }
 
 
@@ -203,7 +185,7 @@ namespace ShortTools.AStar
             PrintMap((character) => Console.Write($" {character} "), map);
 
             Stopwatch watch = new Stopwatch();
-            const long itterations = 1000;
+            const long itterations = 100;
             Queue<Vector2>? path = null;
 
             watch.Start();
@@ -217,9 +199,11 @@ namespace ShortTools.AStar
 
 
             if (path is null) { return; }
+            int count = 0;
             foreach (Vector2 node in path)
             {
-                map[(int)node.X][(int)node.Y] = 'O';
+                map[(int)node.X][(int)node.Y] = count.ToString()?.Last() ?? '!';
+                count++;
             }
 
 
