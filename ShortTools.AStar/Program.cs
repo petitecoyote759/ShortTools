@@ -42,14 +42,22 @@ namespace ShortTools.AStar
 
 
 
+        private static float DefaultGetTileHeuristic(int x, int y) { return 1f; }
+
+
+
+
         /// <summary>
         /// Creates an instance of the PathFinder class which can create paths between 2 seperate points.
         /// </summary>
         /// <param name="Walkable">A function that decides if a tile is walkable, given the coordinates.</param>
         /// <param name="maxDist">A value that specifies the maximum distance that this pathfinder will go.</param>
         /// <param name="useDiagonals">A boolean representing for if this pathfinder will search through diagonals.</param>
-        public PathFinder(Func<int, int, bool> Walkable, int maxDist = 30, bool useDiagonals = true)
+        /// <param name="getTileHeuristic">A function that returns a tile heuristic for each tile.</param>
+        public PathFinder(Func<int, int, bool> Walkable, Func<int, int, float>? getTileHeuristic = null, int maxDist = 30, bool useDiagonals = true)
         {
+            GetTileHeuristic = getTileHeuristic ?? DefaultGetTileHeuristic;
+
             this.Walkable = Walkable;
             this.UseDiagonals = useDiagonals;
             this.MaxDist = maxDist;
@@ -63,12 +71,17 @@ namespace ShortTools.AStar
         /// Updates the tile heuristic and adds the tiles nearby to the toVisitNodes.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveOptimization)]
-        private void UpdateTile(int x, int y, float pathLength, AStarNode parent, int endX, int endY, int startX, int startY)
+        private void UpdateTile(int x, int y, float pathLength, Func<float> Heuristic, AStarNode parent, int endX, int endY, int startX, int startY)
         {
             // if its too far away ignore it.
             if (Math.Abs(x - startX) > MaxDist || Math.Abs(y - startY) > MaxDist) { return; }
             // its its not walkable, we dont care about it.
             if (!Walkable(x, y)) { return; }
+
+
+            // now that we know it is in bounds, as checked by Walkable, heuristic can be added to pathLength
+            pathLength += Heuristic();
+
 
             // Gets the node at the given coords in O(1) time.
             AStarNode? foundNode = visitedNodes.TryGetValue((x, y), out AStarNode? value) ? value : null;
@@ -143,18 +156,18 @@ namespace ShortTools.AStar
 
 
                 // Update connected tiles.
-                UpdateTile(smallestNode.x + 1, smallestNode.y, smallestNode.pathLength + (1 * GetTileHeuristic(smallestNode.x + 1, smallestNode.y)), smallestNode, endX, endY, startX, endY);
-                UpdateTile(smallestNode.x - 1, smallestNode.y, smallestNode.pathLength + (1 * GetTileHeuristic(smallestNode.x - 1, smallestNode.y)), smallestNode, endX, endY, startX, endY);
-                UpdateTile(smallestNode.x, smallestNode.y + 1, smallestNode.pathLength + (1 * GetTileHeuristic(smallestNode.x, smallestNode.y + 1)), smallestNode, endX, endY, startX, endY);
-                UpdateTile(smallestNode.x, smallestNode.y - 1, smallestNode.pathLength + (1 * GetTileHeuristic(smallestNode.x, smallestNode.y - 1)), smallestNode, endX, endY, startX, endY);
+                UpdateTile(smallestNode.x + 1, smallestNode.y, smallestNode.pathLength, () => (1 * GetTileHeuristic(smallestNode.x + 1, smallestNode.y)), smallestNode, endX, endY, startX, endY);
+                UpdateTile(smallestNode.x - 1, smallestNode.y, smallestNode.pathLength, () => (1 * GetTileHeuristic(smallestNode.x - 1, smallestNode.y)), smallestNode, endX, endY, startX, endY);
+                UpdateTile(smallestNode.x, smallestNode.y + 1, smallestNode.pathLength, () => (1 * GetTileHeuristic(smallestNode.x, smallestNode.y + 1)), smallestNode, endX, endY, startX, endY);
+                UpdateTile(smallestNode.x, smallestNode.y - 1, smallestNode.pathLength, () => (1 * GetTileHeuristic(smallestNode.x, smallestNode.y - 1)), smallestNode, endX, endY, startX, endY);
 
                 if (UseDiagonals)
                 {
                     // Update diagonal tiles.
-                    UpdateTile(smallestNode.x + 1, smallestNode.y + 1, smallestNode.pathLength + (1.41f * GetTileHeuristic(smallestNode.x + 1, smallestNode.y)), smallestNode, endX, endY, startX, startY);
-                    UpdateTile(smallestNode.x - 1, smallestNode.y + 1, smallestNode.pathLength + (1.41f * GetTileHeuristic(smallestNode.x - 1, smallestNode.y)), smallestNode, endX, endY, startX, startY);
-                    UpdateTile(smallestNode.x + 1, smallestNode.y - 1, smallestNode.pathLength + (1.41f * GetTileHeuristic(smallestNode.x, smallestNode.y + 1)), smallestNode, endX, endY, startX, startY);
-                    UpdateTile(smallestNode.x - 1, smallestNode.y - 1, smallestNode.pathLength + (1.41f * GetTileHeuristic(smallestNode.x, smallestNode.y - 1)), smallestNode, endX, endY, startX, startY);
+                    UpdateTile(smallestNode.x + 1, smallestNode.y + 1, smallestNode.pathLength, () => (1.41f * GetTileHeuristic(smallestNode.x + 1, smallestNode.y + 1)), smallestNode, endX, endY, startX, startY);
+                    UpdateTile(smallestNode.x - 1, smallestNode.y + 1, smallestNode.pathLength, () => (1.41f * GetTileHeuristic(smallestNode.x - 1, smallestNode.y + 1)), smallestNode, endX, endY, startX, startY);
+                    UpdateTile(smallestNode.x + 1, smallestNode.y - 1, smallestNode.pathLength, () => (1.41f * GetTileHeuristic(smallestNode.x + 1, smallestNode.y - 1)), smallestNode, endX, endY, startX, startY);
+                    UpdateTile(smallestNode.x - 1, smallestNode.y - 1, smallestNode.pathLength, () => (1.41f * GetTileHeuristic(smallestNode.x - 1, smallestNode.y - 1)), smallestNode, endX, endY, startX, startY);
                 }
             }
 
@@ -174,8 +187,17 @@ namespace ShortTools.AStar
     internal class Tester
     {
         // <<Program Settings>> //
-        const bool printMap = false;
+        const bool printMap = true;
 
+
+
+        // <<Program Variables>> //
+
+        static readonly Dictionary<char, float> heuristicValues = new Dictionary<char, float>()
+        {
+            { ' ', 1f },
+            { '-', 0.5f }
+        };
 
 
 
@@ -202,8 +224,10 @@ namespace ShortTools.AStar
             map = GenerateMap(width, height);
 
 
+
             PathFinder pather = new PathFinder(
                 (x, y) => Walkable(x, y, map),
+                getTileHeuristic: (x, y) => heuristicValues[map[x][y]],
                 useDiagonals: true,
                 maxDist: 500
                 );
@@ -250,7 +274,7 @@ namespace ShortTools.AStar
                 char[] column = map[x];
                 if (0 <= y && y < column.Length)
                 {
-                    return map[x][y] == ' ';
+                    return map[x][y] != 'X';
                 }
             }
             return false;
@@ -284,7 +308,11 @@ namespace ShortTools.AStar
                 map[x] = new char[height];
                 for (int y = 0; y < height; y++)
                 {
-                    map[x][y] = RandomNumberGenerator.GetInt32(0, 3) != 0 ? ' ' : 'X'; // 25% chance for 'X', 75% chance for ' '
+                    map[x][y] = RandomNumberGenerator.GetInt32(0, 3) != 0 ? ' ' : 'X'; // 33% chance for 'X', 66% chance for ' '
+                    if (map[x][y] == ' ')
+                    {
+                        map[x][y] = RandomNumberGenerator.GetInt32(0, 3) != 0 ? ' ' : '-';
+                    }
                 }
             }
 
