@@ -13,7 +13,7 @@
     <SignAssembly>False</SignAssembly>
     <AssemblyOriginatorKeyFile>ShortTools</AssemblyOriginatorKeyFile>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Title>ShortTools</Title>
+    <Title>ShortTools.General</Title>
     <Version>1.1.0</Version>
     <Company>ShortTools</Company>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
@@ -23,7 +23,7 @@
 
 	<PropertyGroup>
 		<LangVersion>preview</LangVersion>
-		<PackageId>ShortTools2</PackageId>
+		<PackageId>ShortTools.General</PackageId>
 		<Product>ShortTools2</Product>
 		<Description>A package for some tools that I think can be useful for general use.</Description>
 		<PackageIcon>SSLogo.png</PackageIcon>
@@ -31,6 +31,7 @@
 		<PackageProjectUrl>https://github.com/petitecoyote759/ShortTools</PackageProjectUrl>
 		<RepositoryUrl>https://github.com/petitecoyote759/ShortTools</RepositoryUrl>
 		<PackageLicenseFile>License.txt</PackageLicenseFile>
+		<Authors>petitecoyote759</Authors>
 	</PropertyGroup>
 	
 
