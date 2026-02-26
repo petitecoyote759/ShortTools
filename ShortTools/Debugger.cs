@@ -1,15 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
+﻿using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Linq;
-using System.Reflection.Emit;
-using System.Reflection.Metadata;
 using System.Runtime.CompilerServices;
-using System.Runtime.Versioning;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web;
 
 
 
@@ -20,28 +11,37 @@ namespace ShortTools.General
     /// </summary>
     public sealed class Debugger : IDisposable
     {
-        private List<Log> logs = new List<Log>();
-        /// <summary>
-        /// Retrieves the most recent logs.
-        /// </summary>
-        /// <param name="num">The number of logs retrieved from the most recent log.</param>
-        /// <returns>A log string in format "[Warning Level] HH:MM:SS.mmm - Message".</returns>
-#pragma warning disable CA1002
-        public List<string> GetLogs(int num = 1) => logs.GetRange(logs.Count - num - 1, num).ConvertAll((Log log) => Log.ToString(log));
-#pragma warning restore CA1002
+        // <<Public Variables>> //
 
-        private WarningLevel defaultLevel = WarningLevel.Debug;
+
         /// <summary>
         /// Getter and setter to set what the default addlog function does when there is no warning level input.
         /// </summary>
         public WarningLevel DefaultLevel { get => defaultLevel; set => defaultLevel = value; }
+
+
+
+
+        // <<Private Variables>> //
+
+        private Queue<Log> logs = new Queue<Log>();
+        
+
+        private WarningLevel defaultLevel = WarningLevel.Debug;
+        
         private readonly DebuggerFlag flags = DebuggerFlag.None;
         private readonly string name = "Debugger";
         private int logDeleteNum = -1;
         private int logCleanNum = -1;
         private string fileName = "";
 
-#pragma warning disable CS8618
+        private StreamWriter? logWriter = null;
+
+
+
+
+        // <<Constructors>> //
+
         /// <summary>
         /// Constructor for the debugger with a flag input.
         /// </summary>
@@ -80,10 +80,10 @@ namespace ShortTools.General
             this.flags = flags; this.name = name;
             Setup();
         }
-#pragma warning restore CS8618
 
 
 
+        // <<General Functions>> //
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static DebuggerFlag CoalesceFlags(params DebuggerFlag[] flags)
@@ -125,7 +125,17 @@ namespace ShortTools.General
             if (flags.HasFlag(DebuggerFlag.WriteLogsToFile)) 
             { 
                 if (logDeleteNum == -1) { logDeleteNum = 20; }
-                DoAddLog += Write; 
+                DoAddLog += Write;
+
+
+                // <<Auto Writing>> //
+
+                AppDomain currentDomain = AppDomain.CurrentDomain;
+                currentDomain.UnhandledException += new UnhandledExceptionEventHandler(CrashHandler);
+
+                if (!Directory.Exists($"Logs\\{name}")) { _ = Directory.CreateDirectory($"Logs\\{name}"); }
+                if (!File.Exists($"Logs\\{fileName}")) { File.Create($"Logs\\{fileName}").Dispose(); }
+                logWriter = new StreamWriter($"Logs\\{fileName}");
             }
         }
 
@@ -150,7 +160,7 @@ namespace ShortTools.General
         private Action<string, WarningLevel> DoAddLog;
         private void DefaultAddLog(string inp, WarningLevel level)
         {
-            logs.Add(new Log(inp, level));
+            logs.Enqueue(new Log(inp, level));
         }
         private void DisplayLog(string inp, WarningLevel level)
         {
@@ -158,7 +168,7 @@ namespace ShortTools.General
         }
         private void DestroyLogs(string inp, WarningLevel level)
         {
-            if (logs.Count > logDeleteNum) { logs.RemoveRange(0, logDeleteNum - logs.Count); }
+            while (logs.Count > logDeleteNum) { _ = logs.Dequeue(); }
             if (logCleanNum != -1) 
             {
                 CleanLogs();
@@ -183,27 +193,34 @@ namespace ShortTools.General
                 File.Delete(sortedFiles[i]);
             }
         }
-        private void Write(string inp, WarningLevel level)
+
+
+
+
+        // <<Writing>> //
+        private void WriteAll()
         {
-            if (logs.Count > logDeleteNum)
-            {
-                WriteLogs(logs.GetRange(0, logs.Count - logDeleteNum));
-
-                DestroyLogs(inp, level);
-            }
+            while (logs.Count > 0) { WriteLog(logs.Dequeue()); }
         }
-        private void WriteLogs(ICollection<Log> data)
+        private void Write(string inp = "", WarningLevel level = WarningLevel.Debug)
         {
-            if (!Directory.Exists($"Logs\\{name}")) { Directory.CreateDirectory($"Logs\\{name}"); }
-            //if (!File.Exists($"Logs\\{fileName}")) { File.Create($"Logs\\{fileName}"); }
-
-            using StreamWriter stream = File.AppendText($"Logs\\{name}\\{fileName}");
-
-            foreach (Log log in data)
-            {
-                stream.WriteLine(log.ToString());
-            }
+            WriteLog(logs.Dequeue());
         }
+        private void WriteLog(Log log)
+        {
+            logWriter?.WriteLine(log.ToString());
+        }
+        private void CrashHandler(object sender, UnhandledExceptionEventArgs args)
+        {
+            Exception exception = (Exception)args.ExceptionObject;
+            AddLog($"Exception raised : {exception}", WarningLevel.CriticalError);
+            WriteAll();
+            Dispose();
+        }
+
+
+
+
 
 
 
@@ -221,8 +238,12 @@ namespace ShortTools.General
 
             if (flags.HasFlag(DebuggerFlag.WriteLogsToFile))
             {
-                WriteLogs(logs);
-                logs = new List<Log>();
+                AddLog("Disposing...", WarningLevel.Debug);
+                WriteAll();
+                logWriter?.Close();
+                logWriter?.Dispose();
+                logWriter = null;
+                logs = new Queue<Log>();
             }
             CleanLogs();
         }
@@ -251,6 +272,16 @@ namespace ShortTools.General
 
 
 
+
+
+
+
+
+
+
+
+
+
         internal static void Main()
         {
             using Debugger debugger = new Debugger("Test", DebuggerFlag.ShortDefault);
@@ -261,10 +292,25 @@ namespace ShortTools.General
             debugger.AddLog("Test", WarningLevel.Error);
             debugger.AddLog("Test", WarningLevel.CriticalError);
 
+            int value = int.MaxValue;
+            checked
+            {
+                Console.WriteLine(value + 16);
+            }
 
 
         }
     }
+
+
+
+
+
+
+
+
+
+
 
 
     internal struct Log
@@ -288,6 +334,14 @@ namespace ShortTools.General
             return $"{("[" + warningLevel.ToString() + "]").PadRight(15, ' ')} {now.ToString("HH:mm:ss.fff", CultureInfo.CurrentCulture)} - {info}";
         }
     }
+
+
+
+
+
+
+
+
 
     /// <summary>
     /// The warning level of a log.

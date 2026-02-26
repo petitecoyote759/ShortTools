@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <StartupObject>ShortTools.General.Debugger</StartupObject>
@@ -13,8 +13,8 @@
     <SignAssembly>False</SignAssembly>
     <AssemblyOriginatorKeyFile>ShortTools</AssemblyOriginatorKeyFile>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
-    <Title>ShortTools2</Title>
-    <Version>1.0.0</Version>
+    <Title>ShortTools</Title>
+    <Version>1.1.0</Version>
     <Company>ShortTools</Company>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
     <AnalysisLevel>6.0-all</AnalysisLevel>
@@ -28,6 +28,9 @@
 		<Description>A package for some tools that I think can be useful for general use.</Description>
 		<PackageIcon>SSLogo.png</PackageIcon>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageProjectUrl>https://github.com/petitecoyote759/ShortTools</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/petitecoyote759/ShortTools</RepositoryUrl>
+		<PackageLicenseFile>License.txt</PackageLicenseFile>
 	</PropertyGroup>
 	
 
@@ -44,6 +47,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <None Update="License.txt">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
     <None Update="README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
