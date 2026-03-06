@@ -19,21 +19,28 @@ namespace ShortTools.General
         /// </summary>
         public WarningLevel DefaultLevel { get => defaultLevel; set => defaultLevel = value; }
 
+        /// <summary>
+        /// Getter and setter for the minimum display level when the debugger is printing to console.
+        /// </summary>
+        public WarningLevel DisplayLevel { get => displayLevel; set => displayLevel = value; }
 
 
 
         // <<Private Variables>> //
 
-        private Queue<Log> logs = new Queue<Log>();
+        private Queue<Log> logs;
+        private readonly Queue<Log> debugLogs;
         
 
-        private WarningLevel defaultLevel = WarningLevel.Debug;
+        private WarningLevel defaultLevel;
+        private WarningLevel displayLevel;
         
-        private readonly DebuggerFlag flags = DebuggerFlag.None;
+        private readonly HashSet<DebuggerFlag> flags;
         private readonly string name = "Debugger";
-        private int logDeleteNum = -1;
-        private int logCleanNum = -1;
+        private const int logCleanNum = 10;
+        private const int debugLogLength = 20;
         private string fileName = "";
+        private bool displayThread = false;
 
         private StreamWriter? logWriter = null;
 
@@ -45,98 +52,58 @@ namespace ShortTools.General
         /// <summary>
         /// Constructor for the debugger with a flag input.
         /// </summary>
+        /// <param name="name">The name of the debugger, used in the file name and printing.</param>
+        /// <param name="displayLevel">The lowest warning level that will be displayed in the console when printing</param>
         /// <param name="flags"></param>
-        public Debugger([NotNull] params DebuggerFlag[] flags)
+        public Debugger(string name = "Debugger", WarningLevel displayLevel = WarningLevel.Info, [NotNull] params DebuggerFlag[] flags)
         {
-            this.flags = CoalesceFlags(flags);
-            Setup();
-        }
-        /// <summary>
-        /// Constructor for the debugger with a flag input.
-        /// </summary>
-        /// <param name="flags"></param>
-        public Debugger(DebuggerFlag flags)
-        {
-            this.flags = flags;
-            Setup();
-        }
-        /// <summary>
-        /// Constructor for the debugger with a flag input. 
-        /// </summary>
-        /// <param name="name">The name of the file that the debugger saves to.</param>
-        /// <param name="flags"></param>
-        public Debugger(string name, [NotNull] params DebuggerFlag[] flags)
-        {
-            this.name = name; this.flags = CoalesceFlags(flags);
-            Setup();
-        }
-        /// <summary>
-        /// Constructor for the debugger with a flag input.
-        /// </summary>
-        /// <param name="name">The name of the file that the debugger saves to.</param>
-        /// <param name="flags"></param>
-        public Debugger(string name, DebuggerFlag flags)
-        {
-            this.flags = flags; this.name = name;
-            Setup();
+            this.name = name;
+            this.displayLevel = displayLevel;
+
+            this.flags = new HashSet<DebuggerFlag>(flags);
+            this.logs = new Queue<Log>();
+            this.debugLogs = new Queue<Log>();
+
+
+            DoAddLog = DefaultAddLog;
+            foreach (DebuggerFlag flag in flags)
+            {
+                DoFlagAction(flag);
+            }
+
+            CleanLogs();
         }
 
 
 
         // <<General Functions>> //
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static DebuggerFlag CoalesceFlags(params DebuggerFlag[] flags)
+        private void DoFlagAction(DebuggerFlag flag)
         {
-            DebuggerFlag flag = DebuggerFlag.None;
-            foreach (DebuggerFlag IFlag in flags)
+            Action FlagAction = flag switch
             {
-                flag |= IFlag;
-            }
-            return flag;
+                DebuggerFlag.PrintLogs => () => { DoAddLog += DisplayLog; },
+                DebuggerFlag.WriteLogsToFile => SetupFileWriting,
+                DebuggerFlag.DisplayThread => () => { displayThread = true; },
+
+                _ => () => { }
+            };
+            FlagAction();
         }
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void Setup()
+        private void SetupFileWriting()
         {
-            fileName = $"[{name}] {DateTimeOffset.Now.ToString("dd.MM.yy - HH.mm.ss", CultureInfo.CurrentCulture)}.log";
+            fileName = $"{name}\\{DateTimeOffset.Now.ToString("yyyy.MM.dd - HH.mm.ss", CultureInfo.InvariantCulture)}.log";
 
-            DoAddLog += DefaultAddLog;
+            // <<Crash Handling>> //
+            AppDomain currentDomain = AppDomain.CurrentDomain;
+            currentDomain.UnhandledException += new UnhandledExceptionEventHandler(CrashHandler);
 
-            if (flags.HasFlag(DebuggerFlag.PrintLogs)) { DoAddLog += DisplayLog; }
-
-            if (flags.HasFlag(DebuggerFlag.DestroyLogsAt10)) { logDeleteNum = 10; 
-                if (!flags.HasFlag(DebuggerFlag.WriteLogsToFile)) { DoAddLog += DestroyLogs; } }
-            else if (flags.HasFlag(DebuggerFlag.DestroyLogsAt20)) { logDeleteNum = 20; 
-                if (!flags.HasFlag(DebuggerFlag.WriteLogsToFile)) { DoAddLog += DestroyLogs; } }
-            else if (flags.HasFlag(DebuggerFlag.DestroyLogsAt50)) { logDeleteNum = 50; 
-                if (!flags.HasFlag(DebuggerFlag.WriteLogsToFile)) { DoAddLog += DestroyLogs; } }
-            else if (flags.HasFlag(DebuggerFlag.DestroyLogsAt100)) { logDeleteNum = 100; 
-                if (!flags.HasFlag(DebuggerFlag.WriteLogsToFile)) { DoAddLog += DestroyLogs; } }
-
-            logCleanNum = 50; // default setting
-            if (flags.HasFlag(DebuggerFlag.CleanupLogsAt5)) { logCleanNum = 5; }
-            if (flags.HasFlag(DebuggerFlag.CleanupLogsAt10)) { logCleanNum = 10; }
-            if (flags.HasFlag(DebuggerFlag.CleanupLogsAt20)) { logCleanNum = 20; }
-            if (flags.HasFlag(DebuggerFlag.CleanupLogsAt50)) { logCleanNum = 50; }
-
-
-            if (flags.HasFlag(DebuggerFlag.WriteLogsToFile)) 
-            { 
-                if (logDeleteNum == -1) { logDeleteNum = 20; }
-                DoAddLog += Write;
-
-
-                // <<Auto Writing>> //
-
-                AppDomain currentDomain = AppDomain.CurrentDomain;
-                currentDomain.UnhandledException += new UnhandledExceptionEventHandler(CrashHandler);
-
-                if (!Directory.Exists($"Logs\\{name}")) { _ = Directory.CreateDirectory($"Logs\\{name}"); }
-                if (!File.Exists($"Logs\\{fileName}")) { File.Create($"Logs\\{fileName}").Dispose(); }
-                logWriter = new StreamWriter($"Logs\\{fileName}");
-            }
+            // <<Stream Creation>> //
+            if (!Directory.Exists($"Logs\\{name}")) { _ = Directory.CreateDirectory($"Logs\\{name}"); }
+            if (!File.Exists($"Logs\\{fileName}")) { File.Create($"Logs\\{fileName}").Dispose(); }
+            logWriter = new StreamWriter($"Logs\\{fileName}");
         }
 
 
@@ -144,7 +111,7 @@ namespace ShortTools.General
         /// Adds a log to the debugger with the text inputed, and the DefaultLevel variable as the warning level.
         /// </summary>
         /// <param name="data">Text to be added to the log.</param>
-        public void AddLog([NotNull] string data)
+        public void AddLog(string data)
         {
             AddLog(data, defaultLevel);
         }
@@ -153,26 +120,27 @@ namespace ShortTools.General
         /// </summary>
         /// <param name="data">Text to be added to the log.</param>
         /// <param name="level">The warning level of the log.</param>
-        public void AddLog([NotNull] string data, WarningLevel level)
+        public void AddLog(string data, WarningLevel level)
         {
             DoAddLog(data, level);
         }
         private Action<string, WarningLevel> DoAddLog;
         private void DefaultAddLog(string inp, WarningLevel level)
         {
-            logs.Enqueue(new Log(inp, level));
+            if (level == WarningLevel.Debug)
+            {
+                if (debugLogs.Count >= debugLogLength) { _ = debugLogs.Dequeue(); }
+                debugLogs.Enqueue(new Log(inp, level));
+            }
+            else
+            {
+                logs.Enqueue(new Log(inp, level));
+            }
         }
         private void DisplayLog(string inp, WarningLevel level)
         {
-            ShortTools.General.Prints.Print(new Log(inp, level).ToString(), WarnToConsColour[level]);
-        }
-        private void DestroyLogs(string inp, WarningLevel level)
-        {
-            while (logs.Count > logDeleteNum) { _ = logs.Dequeue(); }
-            if (logCleanNum != -1) 
-            {
-                CleanLogs();
-            }
+            if (level < displayLevel) { return; }
+            ShortTools.General.Prints.Print(new Log(inp, level).ToString(displayThread), WarnToConsColour[level]);
         }
         private void CleanLogs()
         {
@@ -200,11 +168,23 @@ namespace ShortTools.General
         // <<Writing>> //
         private void WriteAll()
         {
-            while (logs.Count > 0) { WriteLog(logs.Dequeue()); }
-        }
-        private void Write(string inp = "", WarningLevel level = WarningLevel.Debug)
-        {
-            WriteLog(logs.Dequeue());
+            while (logs.Count > 0) 
+            {
+                Log log;
+                if (debugLogs.Count == 0) { log = logs.Dequeue(); }
+                else if (debugLogs.Peek().logTime < logs.Peek().logTime)
+                {
+                    // debug log is next
+                    log = debugLogs.Dequeue();
+                }
+                else { log = logs.Dequeue(); }
+                WriteLog(log);
+            }
+
+            while (debugLogs.Count > 0)
+            {
+                WriteLog(debugLogs.Dequeue());
+            }
         }
         private void WriteLog(Log log)
         {
@@ -212,10 +192,10 @@ namespace ShortTools.General
         }
         private void CrashHandler(object sender, UnhandledExceptionEventArgs args)
         {
+            if (disposed) { return; }
             Exception exception = (Exception)args.ExceptionObject;
             AddLog($"Exception raised : {exception}", WarningLevel.CriticalError);
-            WriteAll();
-            Dispose();
+            Dispose(true);
         }
 
 
@@ -231,12 +211,12 @@ namespace ShortTools.General
         /// <summary>
         /// Saves the logs to the file, and safely closes the writing stream.
         /// </summary>
-        public void Dispose()
+        public void Dispose(bool disposing)
         {
             if (disposed) { return; }
             disposed = true;
 
-            if (flags.HasFlag(DebuggerFlag.WriteLogsToFile))
+            if (flags.Contains(DebuggerFlag.WriteLogsToFile))
             {
                 AddLog("Disposing...", WarningLevel.Debug);
                 WriteAll();
@@ -251,7 +231,7 @@ namespace ShortTools.General
         void IDisposable.Dispose()
         {
             GC.SuppressFinalize(this);
-            Dispose();
+            Dispose(true);
         }
 #pragma warning restore CA1063
 
@@ -284,13 +264,22 @@ namespace ShortTools.General
 
         internal static void Main()
         {
-            using Debugger debugger = new Debugger("Test", DebuggerFlag.ShortDefault);
+            //Thread.CurrentThread.Name = "Main Thread";
+
+            using Debugger debugger = new Debugger(
+                name: "Test", displayLevel: WarningLevel.Debug, 
+                DebuggerFlag.PrintLogs, DebuggerFlag.WriteLogsToFile, DebuggerFlag.DisplayThread);
 
             debugger.AddLog("Test", WarningLevel.Debug);
             debugger.AddLog("Test", WarningLevel.Info);
             debugger.AddLog("Test", WarningLevel.Warning);
             debugger.AddLog("Test", WarningLevel.Error);
             debugger.AddLog("Test", WarningLevel.CriticalError);
+
+            for (int i = 0; i < 20; i++)
+            {
+                debugger.AddLog($"Debug Test at time {DateTimeOffset.Now.ToUnixTimeMilliseconds()}", WarningLevel.Debug);
+            }
 
             int value = int.MaxValue;
             checked
@@ -317,21 +306,29 @@ namespace ShortTools.General
     {
         public string info;
         public WarningLevel warningLevel;
-        private readonly DateTimeOffset now;
+        public readonly DateTimeOffset logTime;
 
         public Log(string info, WarningLevel warningLevel)
         {
             this.info = info;
             this.warningLevel = warningLevel;
-            now = DateTimeOffset.Now;
+            logTime = DateTimeOffset.Now;
         }
 
 
         public static string ToString(Log log) => log.ToString();
 
-        public readonly override string ToString()
+        public readonly override string ToString() => ToString(false);
+        public readonly string ToString(bool writeThread)
         {
-            return $"{("[" + warningLevel.ToString() + "]").PadRight(15, ' ')} {now.ToString("HH:mm:ss.fff", CultureInfo.CurrentCulture)} - {info}";
+            if (writeThread && !string.IsNullOrEmpty(Thread.CurrentThread.Name))
+            {
+                return $"{("[" + warningLevel.ToString() + "]").PadRight(15, ' ')} {logTime.ToString("HH:mm:ss.fff", CultureInfo.CurrentCulture)} [{Thread.CurrentThread.Name}] - {info}";
+            }
+            else
+            {
+                return $"{("[" + warningLevel.ToString() + "]").PadRight(15, ' ')} {logTime.ToString("HH:mm:ss.fff", CultureInfo.CurrentCulture)} - {info}";
+            }
         }
     }
 
@@ -387,48 +384,12 @@ namespace ShortTools.General
         /// </summary>
         PrintLogs,
         /// <summary>
-        /// defaults to 20
+        /// Writes the logs to a file in the 'Logs' folder
         /// </summary>
         WriteLogsToFile,
         /// <summary>
-        /// Makes the log list be capped at 10 logs, reducing ram usage.
+        /// Displays the thread name in the logs, will not if there is no thread name
         /// </summary>
-        DestroyLogsAt10 = 4,
-        /// <summary>
-        /// Makes the log list be capped at 20 logs, reducing ram usage.
-        /// </summary>
-        DestroyLogsAt20 = 8,
-        /// <summary>
-        /// Makes the log list be capped at 50 logs.
-        /// </summary>
-        DestroyLogsAt50 = 16,
-        /// <summary>
-        /// Makes the log list be capped at 100 logs.
-        /// </summary>
-        DestroyLogsAt100 = 32,
-
-        /// <summary>
-        /// Makes the saved log files only be the last 5 logs.
-        /// </summary>
-        CleanupLogsAt5 = 64,
-        /// <summary>
-        /// Makes the saved log files only be the last 10 logs.
-        /// </summary>
-        CleanupLogsAt10 = 128,
-        /// <summary>
-        /// Makes the saved log files only be the last 20 logs.
-        /// </summary>
-        CleanupLogsAt20 = 256,
-        /// <summary>
-        /// Makes the saved log files only be the last 50 logs.
-        /// </summary>
-        CleanupLogsAt50 = 512,
-
-
-
-        /// <summary>
-        /// The general settings advised, including printing of logs and writing of logs to files, at a max log amount of 20 in ram and 10 files stored.
-        /// </summary>
-        ShortDefault = PrintLogs | WriteLogsToFile | DestroyLogsAt20 | CleanupLogsAt10,
+        DisplayThread,
     }
 }
