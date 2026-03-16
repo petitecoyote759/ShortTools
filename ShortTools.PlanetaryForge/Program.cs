@@ -16,9 +16,9 @@ namespace ShortTools.PlanetaryForge
         /// <param name="width"></param>
         /// <param name="height"></param>
         /// <returns></returns>
-        public static (TileID[][], float[][]) CreateMap(int width, int height)
+        public static (TileID[][], float[][]) CreateMap(int width, int height, Random? random = null)
         {
-            Random random = new Random();
+            random ??= new Random();
 
             centre = new Tuple<int, int>(width / 2, height / 2);
 
