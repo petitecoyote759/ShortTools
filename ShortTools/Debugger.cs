@@ -94,16 +94,16 @@ namespace ShortTools.General
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void SetupFileWriting()
         {
-            fileName = $"{name}\\{DateTimeOffset.Now.ToString("yyyy.MM.dd - HH.mm.ss", CultureInfo.InvariantCulture)}.log";
+            fileName = Path.Combine($"{name}",$"{DateTimeOffset.Now.ToString("yyyy.MM.dd - HH.mm.ss", CultureInfo.InvariantCulture)}.log");
 
             // <<Crash Handling>> //
             AppDomain currentDomain = AppDomain.CurrentDomain;
             currentDomain.UnhandledException += new UnhandledExceptionEventHandler(CrashHandler);
 
             // <<Stream Creation>> //
-            if (!Directory.Exists($"Logs\\{name}")) { _ = Directory.CreateDirectory($"Logs\\{name}"); }
-            if (!File.Exists($"Logs\\{fileName}")) { File.Create($"Logs\\{fileName}").Dispose(); }
-            logWriter = new StreamWriter($"Logs\\{fileName}");
+            if (!Directory.Exists(Path.Combine($"Logs",$"{name}"))) { _ = Directory.CreateDirectory(Path.Combine($"Logs",$"{name}")); }
+            if (!File.Exists(Path.Combine($"Logs", $"{fileName}"))) { File.Create(Path.Combine($"Logs", $"{fileName}")).Dispose(); }
+            logWriter = new StreamWriter(Path.Combine($"Logs", $"{fileName}"));
         }
 
 
@@ -144,9 +144,9 @@ namespace ShortTools.General
         }
         private void CleanLogs()
         {
-            if (!Directory.Exists($"Logs\\{name}")) { return; }
+            if (!Directory.Exists(Path.Combine($"Logs", $"{name}"))) { return; }
 
-            string[] files = Directory.GetFiles($"Logs\\{name}");
+            string[] files = Directory.GetFiles(Path.Combine($"Logs", $"{name}"));
 
             if (files.Length <= logCleanNum) { return; }
 
