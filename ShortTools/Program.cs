@@ -57,13 +57,18 @@ namespace ShortTools.General
 
 
         /// <summary>
-        /// <para> Writes input to console, just shorter to write than Console.WriteLine(). </para>
+        /// Writes input to console, just shorter to write than Console.WriteLine(). <br/>
+        /// This function is threadsafe with <see cref="ReadFunctions.ReadInput"/> to allow you to read inputs while printing on other threads.
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="message"> The message to be printed. </param>
         public static void Print<T>(T message)
         {
-            Console.WriteLine(message);
+            bool readActive = ReadFunctions.outputBuilder is not null;
+            string outputString = message?.ToString() ?? "null";
+            if (readActive) { Console.CursorLeft = 0; outputString = outputString.PadRight(ReadFunctions.outputBuilder!.Length, ' '); }
+            Console.WriteLine(outputString);
+            if (readActive) { Console.Write(ReadFunctions.outputBuilder!.ToString()); }
         }
 
 
@@ -72,7 +77,7 @@ namespace ShortTools.General
         /// </summary>
         public static void Print()
         {
-            Console.WriteLine();
+            Print(string.Empty);
         }
 
 
@@ -83,6 +88,11 @@ namespace ShortTools.General
         /// <param name="inp"> The message to be printed. </param>
         public static void Print<T>(T[] inp)
         {
+            bool readActive = ReadFunctions.outputBuilder is not null;
+            // Delete the read text from the console
+            if (readActive) { Console.CursorLeft = 0; Console.Write(new string(' ', ReadFunctions.outputBuilder!.Length)); Console.CursorLeft = 0; }
+
+
             if (inp is null || inp.Length == 0) 
             { Console.WriteLine(TR("Array Open") + TR("Gap") + TR("Array Close")); return; }
 
@@ -96,6 +106,10 @@ namespace ShortTools.General
             }
             Console.Write(inp.Last());
             Console.WriteLine(TR("Gap") + TR("Array Close"));
+
+
+            // Re add the read text after completed
+            if (readActive) { Console.Write(ReadFunctions.outputBuilder!.ToString()); }
         }
 
 
@@ -106,6 +120,11 @@ namespace ShortTools.General
         /// <param name="inp"> The message to be printed. </param>
         public static void Print<T>(Collection<T> inp)
         {
+            bool readActive = ReadFunctions.outputBuilder is not null;
+            // Delete the read text from the console
+            if (readActive) { Console.CursorLeft = 0; Console.Write(new string(' ', ReadFunctions.outputBuilder!.Length)); Console.CursorLeft = 0; }
+
+
             if (inp is null || inp.Count == 0) { Console.WriteLine(TR("List Open") + TR("Gap") + TR("List Close")); return; }
             if (inp.Count == 1) { Console.WriteLine("{ " + inp[0] + " }"); return; }
 
@@ -116,6 +135,10 @@ namespace ShortTools.General
             }
             Console.Write(inp.Last());
             Console.WriteLine(TR("Gap") + TR("List Close"));
+
+
+            // Re add the read text after completed
+            if (readActive) { Console.Write(ReadFunctions.outputBuilder!.ToString()); }
         }
 
         /// <summary>
@@ -126,6 +149,11 @@ namespace ShortTools.General
         /// <param name="dictionary"> The dictionary to be printed. </param>
         public static void Print<T1, T2>(IDictionary<T1, T2> dictionary)
         {
+            bool readActive = ReadFunctions.outputBuilder is not null;
+            // Delete the read text from the console
+            if (readActive) { Console.CursorLeft = 0; Console.Write(new string(' ', ReadFunctions.outputBuilder!.Length)); Console.CursorLeft = 0; }
+
+
             if (dictionary is null || dictionary.Count == 0) 
             { Console.WriteLine(TR("Dictionary Open", "Gap", "Dictionary Close")); return; }
 
@@ -141,6 +169,10 @@ namespace ShortTools.General
             }
             Console.Write(
 $"{TR("Dictionary Entry Open")}{TR("Gap")}{Keys.Last()}{TR("Gap", "Dictionary Entry Seperator", "Gap")}{Values.Last()}{TR("Gap")}{TR("Dictionary Entry Close")}{TR("Gap", "Dictionary Close")}");
+
+
+            // Re add the read text after completed
+            if (readActive) { Console.Write(ReadFunctions.outputBuilder!.ToString()); }
         }
 
         /// <summary>
@@ -149,6 +181,11 @@ $"{TR("Dictionary Entry Open")}{TR("Gap")}{Keys.Last()}{TR("Gap", "Dictionary En
         /// <param name="dictionary"> The dictionary to be printed. </param>
         public static void Print(IDictionary<object, object> dictionary)
         {
+            bool readActive = ReadFunctions.outputBuilder is not null;
+            // Delete the read text from the console
+            if (readActive) { Console.CursorLeft = 0; Console.Write(new string(' ', ReadFunctions.outputBuilder!.Length)); Console.CursorLeft = 0; }
+
+
             if (dictionary is null || dictionary.Count == 0) { Console.WriteLine(TR("Dictionary Open", "Gap", "Dictionary Close")); return; }
 
             object[] Keys = dictionary.Keys.ToArray();
@@ -163,11 +200,15 @@ $"{TR("Dictionary Entry Open")}{TR("Gap")}{Keys.Last()}{TR("Gap", "Dictionary En
             }
             Console.Write(
 $"{TR("Dictionary Entry Open")}{TR("Gap")}{Keys.Last()}{TR("Gap", "Dictionary Entry Seperator", "Gap")}{Values.Last()}{TR("Gap")}{TR("Dictionary Entry Close")}{TR("Gap", "Dictionary Close")}");
+
+
+            // Re add the read text after completed
+            if (readActive) { Console.Write(ReadFunctions.outputBuilder!.ToString()); }
         }
 
 
 
-
+        // <<Coloured Printing>> //
         /// <summary>
         /// <para> Writes input to console, just shorter to write than Console.WriteLine(). </para>
         /// </summary>
@@ -232,6 +273,45 @@ $"{TR("Dictionary Entry Open")}{TR("Gap")}{Keys.Last()}{TR("Gap", "Dictionary En
     }
 
 
+    /// <summary>
+    /// Class that provides a function for thread safe reading. (<see cref="ReadInput"/>)
+    /// </summary>
+    public static class ReadFunctions
+    {
+        internal static StringBuilder? outputBuilder = null;
+        /// <summary>
+        /// When this is used, if another thread calls <see cref="Prints.Print()"/> 
+        /// then it will automatically move the text that you have typed onto the line below.
+        /// </summary>
+        /// <returns></returns>
+        public static string ReadInput()
+        {
+            outputBuilder = new StringBuilder();
+
+            while (true)
+            {
+                ConsoleKeyInfo keyInfo = Console.ReadKey();
+                if (keyInfo.Key == ConsoleKey.Enter) { break; }
+                if (keyInfo.Key == ConsoleKey.Backspace) 
+                { 
+                    if (Console.CursorLeft == 0) { continue; }
+                    Console.Write(' '); 
+                    Console.CursorLeft -= 1;
+                    _ = outputBuilder.Remove(outputBuilder.Length - 1, 1);
+                    continue; 
+                }
+                _ = outputBuilder.Append(keyInfo.KeyChar);
+            }
+
+            string output = outputBuilder.ToString();
+            outputBuilder = null;
+            return output;
+        }
+    }
+
+
+
+
 
 
 
@@ -271,10 +351,9 @@ $"{TR("Dictionary Entry Open")}{TR("Gap")}{Keys.Last()}{TR("Gap", "Dictionary En
     {
         private static void Main(string[] args)
         {
-            IDictionary<string, int> values = new Dictionary<string, int>() { { "123", 123 }, { "143", 423 }, { "531", 535 } };
-            //int[] values = new int[] { 2, 1, 6, 4, 9 };
-
-            Prints.Print(values);
+            Thread thread = new Thread(new ThreadStart(() => { Thread.Sleep(5000); Prints.Print(new int[50]); } ));
+            thread.Start();
+            ReadFunctions.ReadInput();
         }
     }
 }
