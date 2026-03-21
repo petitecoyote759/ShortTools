@@ -14,7 +14,7 @@ namespace ShortTools.SDL
     /// DO NOT USE!!! this adds a single extention for the <see cref="int">int</see> type that checks if the value is 0, it is not intended for public use.
     /// </summary>
     [Obsolete("Not intended for public use.", false, UrlFormat = WarningCodes.URL, DiagnosticId = WarningCodes.NotForPublicUse)]
-    public static class ZeroExtention
+    internal static class ZeroExtention
     {
         /// <summary>
         /// Checks if the value is != 0, makes some code more readable
