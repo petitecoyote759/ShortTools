@@ -291,7 +291,7 @@ $"{TR("Dictionary Entry Open")}{TR("Gap")}{Keys.Last()}{TR("Gap", "Dictionary En
             while (true)
             {
                 ConsoleKeyInfo keyInfo = Console.ReadKey();
-                if (keyInfo.Key == ConsoleKey.Enter) { break; }
+                if (keyInfo.Key == ConsoleKey.Enter) { Console.Write('\n'); break; }
                 if (keyInfo.Key == ConsoleKey.Backspace) 
                 { 
                     if (Console.CursorLeft == 0) { continue; }
