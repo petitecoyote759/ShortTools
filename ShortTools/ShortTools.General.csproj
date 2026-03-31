@@ -14,7 +14,7 @@
     <AssemblyOriginatorKeyFile>ShortTools</AssemblyOriginatorKeyFile>
     <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
     <Title>ShortTools.General</Title>
-    <Version>1.2.1</Version>
+    <Version>1.3.0</Version>
     <Company>ShortTools</Company>
     <EnforceCodeStyleInBuild>True</EnforceCodeStyleInBuild>
     <AnalysisLevel>6.0-all</AnalysisLevel>
