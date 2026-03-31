@@ -1,5 +1,6 @@
 ﻿using System.Collections.ObjectModel;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace ShortTools.General
@@ -334,6 +335,150 @@ $"{TR("Dictionary Entry Open")}{TR("Gap")}{Keys.Last()}{TR("Gap", "Dictionary En
             long dt = millis - LastFrameTimeMS;
             LastFrameTimeMS = millis;
             return dt;
+        }
+
+
+
+
+
+
+        // <<Tile Ray Functions>> //
+
+#pragma warning disable
+        /// <summary>
+        /// Where a line hits a tile, on the top, left, bottom, or right.
+        /// </summary>
+        public enum HitPosition : byte
+        {
+            Top, 
+            Bottom, 
+            Left, 
+            Right
+        }
+
+
+        /// <summary>
+        /// Intersection information, containing tile hit coordinates and the hit direction
+        /// </summary>
+        [StructLayout(LayoutKind.Auto)]
+        public readonly struct IntersectInfo
+        {
+#pragma warning restore
+            /// <summary>
+            /// X coordinate of the tile that was hit.
+            /// </summary>
+            public readonly int x;
+            /// <summary>
+            /// Y coordinate of the tile that was hit.
+            /// </summary>
+            public readonly int y;
+
+            /// <summary>
+            /// X coordinate of the intersection point.
+            /// </summary>
+            public readonly float hitX;
+            /// <summary>
+            /// Y coordinate of the intersection point.
+            /// </summary>
+            public readonly float hitY;
+
+            /// <summary>
+            /// The direction in which the tile was hit from.
+            /// </summary>
+            public readonly HitPosition hitDirection;
+
+            /// <summary>
+            /// Creates an Intersect Info instance.
+            /// </summary>
+            /// <param name="x"></param>
+            /// <param name="y"></param>
+            /// <param name="hitX"></param>
+            /// <param name="hitY"></param>
+            /// <param name="hitPosition"></param>
+            public IntersectInfo(int x, int y, float hitX, float hitY, HitPosition hitPosition)
+            {
+                this.x = x;
+                this.y = y;
+
+                this.hitX = hitX;
+                this.hitY = hitY;
+
+                this.hitDirection = hitPosition;
+            }
+        }
+
+        /// <summary>
+        /// Gets the tiles that a line goes through in a 2d plane, not including the current tile.
+        /// </summary>
+        /// <param name="x">The x coordinate the line starts at.</param>
+        /// <param name="y">The y coordinate the line starts at.</param>
+        /// <param name="dx">The x direction of the line.</param>
+        /// <param name="dy">The y direction of the line.</param>
+        /// <param name="count">The total amount of tiles to get.</param>
+        /// <returns>An array of <see cref="IntersectInfo"/>'s, not including the tile that the line spawned from.</returns>
+        public static IntersectInfo[] GetIntersectPoints(float x, float y, float dx, float dy, int count)
+        {
+            // Main maths at https://www.desmos.com/calculator/x2pzte0do0
+
+            IntersectInfo[] output = new IntersectInfo[count];
+
+            int startX = (int)MathF.Floor(x) + (dx < 0 ? 0 : 1);
+            int startY = (int)MathF.Floor(y) + (dy < 0 ? 0 : 1);
+
+            int xIndex = 0; // x is the ones that intersect the X axis
+            int yIndex = 0; // y is the ones that intersect the Y axis
+
+            int targetX;
+            int targetY;
+            float hitX;
+            float hitY;
+
+            bool above = dy < 0; // hits will be the top of the square if true
+            HitPosition yHit = above ? HitPosition.Top : HitPosition.Bottom;
+            bool left = dx < 0; // hits will be on the left if true
+            HitPosition xHit = left ? HitPosition.Left : HitPosition.Right;
+
+            for (int i = 0; i < count; i++)
+            {
+                // Distance to the next line
+                float xDist = (startX + (dx < 0 ? -xIndex : xIndex) - x) / dx;
+                float yDist = (startY + (dy < 0 ? -yIndex : yIndex) - y) / dy;
+
+                // Which one is closer, the x lines or the y lines
+                HitPosition hitDirection;
+                if (xDist < yDist)
+                {
+                    hitX = x + (xDist * dx);
+                    hitY = y + (xDist * dy);
+
+                    targetX = (int)(hitX) + (left ? -1 : 0);
+                    targetY = (int)MathF.Floor(hitY);
+                    xIndex++;
+                    hitDirection = xHit;
+                }
+                else
+                {
+                    hitX = x + (yDist * dx);
+                    hitY = y + (yDist * dy);
+
+                    targetX = (int)MathF.Floor(hitX);
+                    targetY = (int)(hitY) + (above ? -1 : 0);
+                    yIndex++;
+                    hitDirection = yHit;
+                }
+
+                // If not already in the set
+                if (i == 0 || targetX != output[i - 1].x || targetY != output[i - 1].y)
+                {
+                    output[i] = new IntersectInfo(targetX, targetY, hitX, hitY, hitDirection);
+                }
+                else
+                {
+                    i--; // already in set, go back to keep looking. (index will be updated already)
+                }
+            }
+
+            return output;
         }
     }
 
